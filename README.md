@@ -6,8 +6,8 @@
 
 <!-- TODO: replace with a GIF of the demo session (ScreenToGif / ShareX work well) -->
 <!-- ![Lap Analyzer screenshot](docs/screenshot.gif) -->
-
-[![CI](https://github.com/OWNER/lap-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/lap-analyzer/actions/workflows/ci.yml)
+![Lap Analyzer screenshot](docs/demo.gif)
+[![CI](https://github.com/emb1496/lap-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/emb1496/lap-analyzer/actions/workflows/ci.yml)
 
 ## Features
 
