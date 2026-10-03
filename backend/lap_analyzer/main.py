@@ -5,13 +5,14 @@ from __future__ import annotations
 from dataclasses import asdict
 
 import numpy as np
+from fastapi import FastAPI, HTTPException, Query, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+
 from lap_analyzer.models.comparison_out import ComparisonOut
 from lap_analyzer.models.lap_ref import LapRef
 from lap_analyzer.models.lap_summary import LapSummary
 from lap_analyzer.models.session_summary import SessionSummary
 from lap_analyzer.models.trace import Trace
-from fastapi import FastAPI, HTTPException, Query, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
 
 from . import __version__
 from .analysis import LapTrace, compare_traces

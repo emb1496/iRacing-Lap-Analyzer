@@ -6,6 +6,7 @@ from lap_analyzer.models.corner_out import CornerOut
 from lap_analyzer.models.lap_ref import LapRef
 from lap_analyzer.models.trace import Trace
 
+
 class ComparisonOut(BaseModel):
     track: str
     track_length: float
