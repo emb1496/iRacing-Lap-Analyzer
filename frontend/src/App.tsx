@@ -4,7 +4,7 @@ import { CornerTable } from "./components/CornerTable";
 import { type Role, SessionPanel } from "./components/SessionPanel";
 import { TelemetryCharts } from "./components/TelemetryCharts";
 import { TrackMap } from "./components/TrackMap";
-import { formatDelta, formatLapTime } from "./format";
+import { cornerRange, formatDelta, formatLapTime, type Range } from "./format";
 import { describeCorner } from "./insight";
 import type { Comparison, LapSelection, SessionSummary } from "./types";
 import { useUnits } from "./units";
@@ -29,6 +29,7 @@ export default function App() {
   });
   const [comparison, setComparison] = useState<Comparison | null>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const [zoom, setZoom] = useState<Range | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,6 +61,7 @@ export default function App() {
       .then((result) => {
         setComparison(result);
         setHoverIndex(null);
+        setZoom(null);
       })
       .catch((e) => {
         if (!controller.signal.aborted) setError(e instanceof Error ? e.message : String(e));
@@ -143,12 +145,16 @@ export default function App() {
             </section>
 
             <section className="overview">
-              <TrackMap comparison={comparison} hoverIndex={hoverIndex} />
-              <CornerTable comparison={comparison} onHover={setHoverIndex} />
+              <TrackMap comparison={comparison} hoverIndex={hoverIndex} zoom={zoom} />
+              <CornerTable
+                comparison={comparison}
+                onHover={setHoverIndex}
+                onSelect={(k) => setZoom(cornerRange(k, comparison.track_length))}
+              />
             </section>
 
             <section className="panel">
-              <TelemetryCharts comparison={comparison} onHover={setHoverIndex} />
+              <TelemetryCharts comparison={comparison} onHover={setHoverIndex} zoom={zoom} onZoom={setZoom} />
             </section>
           </>
         )}

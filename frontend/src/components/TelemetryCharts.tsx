@@ -1,8 +1,9 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CartesianGrid,
   Line,
   LineChart,
+  ReferenceArea,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -10,13 +11,25 @@ import {
   YAxis,
 } from "recharts";
 import type { MouseHandlerDataParam } from "recharts";
-import { convertSpeed, formatDelta, formatLongDist, formatShortDist, speedUnit } from "../format";
+import {
+  convertSpeed,
+  cornerRange,
+  formatDelta,
+  formatLongDist,
+  formatShortDist,
+  MIN_ZOOM_SPAN,
+  type Range,
+  speedUnit,
+} from "../format";
 import type { Comparison } from "../types";
 import { useUnits } from "../units";
 
 interface Props {
   comparison: Comparison;
   onHover: (index: number | null) => void;
+  /** Visible distance window in metres, or null for the whole lap. */
+  zoom: Range | null;
+  onZoom: (range: Range | null) => void;
 }
 
 interface Row {
@@ -33,8 +46,34 @@ interface Row {
 const REF = "var(--ref)";
 const CMP = "var(--cmp)";
 
-export function TelemetryCharts({ comparison: c, onHover }: Props) {
+/** Y domain fitted to the rows inside the visible window, with a little headroom. */
+function fitDomain(rows: Row[], keys: (keyof Row)[], range: Range | null): [number, number] {
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const r of rows) {
+    if (range && (r.d < range[0] || r.d > range[1])) continue;
+    for (const k of keys) {
+      const v = r[k];
+      if (v == null) continue;
+      if (v < lo) lo = v;
+      if (v > hi) hi = v;
+    }
+  }
+  if (!Number.isFinite(lo)) return [0, 1];
+  const pad = (hi - lo) * 0.08 || 1;
+  return [lo - pad, hi + pad];
+}
+
+export function TelemetryCharts({ comparison: c, onHover, zoom, onZoom }: Props) {
   const { units } = useUnits();
+  // Brush selection in progress: distances (m) where the drag began and currently is.
+  const [drag, setDragState] = useState<Range | null>(null);
+  // Mirrors `drag` synchronously so a fast click's mouseup sees the mousedown.
+  const dragRef = useRef<Range | null>(null);
+  const setDrag = (r: Range | null) => {
+    dragRef.current = r;
+    setDragState(r);
+  };
   const rows = useMemo<Row[]>(
     () =>
       c.distance.map((d, i) => ({
@@ -50,31 +89,72 @@ export function TelemetryCharts({ comparison: c, onHover }: Props) {
     [c, units],
   );
 
-  const handleMove = (state: MouseHandlerDataParam) => {
+  const indexOf = (state: MouseHandlerDataParam): number | null => {
     const i = state.activeTooltipIndex;
-    onHover(typeof i === "number" ? i : i != null ? Number(i) : null);
+    return typeof i === "number" ? i : i != null ? Number(i) : null;
   };
+
+  const commitDrag = () => {
+    const d = dragRef.current;
+    if (d) {
+      const lo = Math.min(...d);
+      const hi = Math.max(...d);
+      if (hi - lo >= MIN_ZOOM_SPAN) onZoom([lo, hi]);
+    }
+    setDrag(null);
+  };
+
+  // A drag released outside the chart still ends the brush.
+  useEffect(() => {
+    if (!drag) return;
+    window.addEventListener("mouseup", commitDrag);
+    return () => window.removeEventListener("mouseup", commitDrag);
+  });
 
   const shared = {
     data: rows,
     syncId: "lap",
     margin: { top: 8, right: 16, bottom: 0, left: 0 },
-    onMouseMove: handleMove,
+    onMouseDown: (state: MouseHandlerDataParam) => {
+      const i = indexOf(state);
+      if (i != null) setDrag([rows[i].d, rows[i].d]);
+    },
+    onMouseMove: (state: MouseHandlerDataParam) => {
+      const i = indexOf(state);
+      onHover(i);
+      if (dragRef.current && i != null) setDrag([dragRef.current[0], rows[i].d]);
+    },
     onMouseLeave: () => onHover(null),
   };
+
+  const domain: Range = zoom ?? [0, c.track_length];
+  const speedDomain = useMemo(
+    () => fitDomain(rows, ["refSpeed", "cmpSpeed"], zoom),
+    [rows, zoom],
+  );
+  const deltaDomain = useMemo(() => fitDomain(rows, ["delta"], zoom), [rows, zoom]);
+  const brush = drag && drag[0] !== drag[1] && (
+    <ReferenceArea x1={drag[0]} x2={drag[1]} fill="var(--text)" fillOpacity={0.12} stroke="none" />
+  );
 
   const xAxis = (show: boolean) => (
     <XAxis
       dataKey="d"
       type="number"
-      domain={[0, c.track_length]}
+      domain={domain}
+      allowDataOverflow
       hide={!show}
-      tickFormatter={(m: number) => formatLongDist(m, units)}
+      tickFormatter={(m: number) =>
+        domain[1] - domain[0] < 2000 ? formatShortDist(m, units) : formatLongDist(m, units)
+      }
       stroke="var(--muted)"
     />
   );
 
-  const corners = c.corners.map((corner) => (
+  const visibleCorners = c.corners.filter(
+    (corner) => corner.apex >= domain[0] && corner.apex <= domain[1],
+  );
+  const corners = visibleCorners.map((corner) => (
     <ReferenceLine
       key={corner.number}
       x={corner.apex}
@@ -107,7 +187,37 @@ export function TelemetryCharts({ comparison: c, onHover }: Props) {
   const hasPedals = c.ref_trace.throttle && c.ref_trace.brake;
 
   return (
-    <div className="charts">
+    <div
+      className={`charts${drag ? " brushing" : ""}`}
+      onDoubleClick={() => onZoom(null)}
+      onMouseUp={commitDrag}
+    >
+      <div className="zoom-bar">
+        <span className="hint">
+          {zoom
+            ? `Showing ${formatShortDist(zoom[0], units)} – ${formatShortDist(zoom[1], units)}`
+            : "Drag on any chart to zoom"}
+        </span>
+        <div className="chips" role="group" aria-label="Zoom to corner">
+          {c.corners.map((corner) => {
+            const [lo, hi] = cornerRange(corner, c.track_length);
+            const active = zoom != null && zoom[0] === lo && zoom[1] === hi;
+            return (
+              <button
+                key={corner.number}
+                className="chip"
+                aria-pressed={active}
+                onClick={() => onZoom(active ? null : [lo, hi])}
+              >
+                T{corner.number}
+              </button>
+            );
+          })}
+        </div>
+        <button className="chip" disabled={!zoom} onClick={() => onZoom(null)}>
+          Reset zoom
+        </button>
+      </div>
       <h3>
         Time delta <small>(above zero: {c.cmp.label} is behind)</small>
       </h3>
@@ -118,10 +228,12 @@ export function TelemetryCharts({ comparison: c, onHover }: Props) {
           <YAxis
             width={48}
             stroke="var(--muted)"
+            domain={deltaDomain}
+            allowDataOverflow
             tickFormatter={(v: number) => formatDelta(v, 1)}
           />
           {corners}
-          {c.corners.map((corner) => (
+          {visibleCorners.map((corner) => (
             <ReferenceLine
               key={`label-${corner.number}`}
               x={corner.apex}
@@ -137,6 +249,7 @@ export function TelemetryCharts({ comparison: c, onHover }: Props) {
             isAnimationActive={false}
           />
           {line("delta", "var(--text)", "Delta")}
+          {brush}
         </LineChart>
       </ResponsiveContainer>
 
@@ -145,11 +258,18 @@ export function TelemetryCharts({ comparison: c, onHover }: Props) {
         <LineChart {...shared}>
           <CartesianGrid stroke="var(--grid)" vertical={false} />
           {xAxis(!hasPedals)}
-          <YAxis width={48} stroke="var(--muted)" unit="" />
+          <YAxis
+            width={48}
+            stroke="var(--muted)"
+            domain={speedDomain}
+            allowDataOverflow
+            tickFormatter={(v: number) => String(Math.round(v))}
+          />
           {corners}
           {tooltip(speedUnit(units))}
           {line("refSpeed", REF, c.ref.label)}
           {line("cmpSpeed", CMP, c.cmp.label)}
+          {brush}
         </LineChart>
       </ResponsiveContainer>
 
@@ -167,6 +287,7 @@ export function TelemetryCharts({ comparison: c, onHover }: Props) {
               {line("cmpThrottle", CMP, `${c.cmp.label} throttle`)}
               {line("refBrake", REF, `${c.ref.label} brake`, true)}
               {line("cmpBrake", CMP, `${c.cmp.label} brake`, true)}
+              {brush}
             </LineChart>
           </ResponsiveContainer>
         </>
