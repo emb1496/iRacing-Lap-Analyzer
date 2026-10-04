@@ -4,8 +4,6 @@
 
 > **Turn 7:** losing 0.50s, 20% less brake pressure, 10 km/h slower at the apex.
 
-<!-- TODO: replace with a GIF of the demo session (ScreenToGif / ShareX work well) -->
-<!-- ![Lap Analyzer screenshot](docs/screenshot.gif) -->
 ![Lap Analyzer screenshot](docs/demo.gif)
 [![CI](https://github.com/emb1496/lap-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/emb1496/lap-analyzer/actions/workflows/ci.yml)
 
