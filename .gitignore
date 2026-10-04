@@ -27,3 +27,5 @@ Thumbs.db
 build/
 *.spec
 .build-venv/
+.build*
+backend/dist/
