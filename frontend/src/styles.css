@@ -449,3 +449,19 @@ td {
     padding: 16px;
   }
 }
+
+.map-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+.swatch.ref {
+  background: var(--ref);
+}
+.swatch.cmp {
+  background: var(--cmp);
+}
+.legend .gap {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
