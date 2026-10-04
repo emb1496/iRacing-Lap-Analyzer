@@ -5,7 +5,7 @@
 > **Turn 7:** losing 0.50s, 20% less brake pressure, 10 km/h slower at the apex.
 
 ![Lap Analyzer screenshot](docs/demo.gif)
-[![CI](https://github.com/emb1496/lap-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/emb1496/lap-analyzer/actions/workflows/ci.yml)
+[![CI](https://github.com/emb1496/iRacing-Lap-Analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/emb1496/iRacing-Lap-Analyzer/actions/workflows/ci.yml)
 
 ## Features
 
