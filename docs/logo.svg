@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Lap Analyzer logo">
+  <rect width="128" height="128" rx="28" fill="#12141a"/>
+  <!-- two laps through the same corners: reference (green) vs. slower lap (red) -->
+  <path d="M26 88 L26 52 Q26 36 42 36 L70 36 Q82 36 86 46 Q90 56 100 56 Q106 56 106 64 L106 82 Q106 92 96 92 L40 92 Q26 92 26 88 Z"
+        fill="none" stroke="#2a2f3a" stroke-width="14" stroke-linejoin="round"/>
+  <path d="M26 88 L26 52 Q26 36 42 36 L70 36 Q82 36 86 46 Q90 56 100 56 Q106 56 106 64 L106 82 Q106 92 96 92 L40 92 Q26 92 26 88 Z"
+        fill="none" stroke="#34d399" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"
+        stroke-dasharray="150 400"/>
+  <path d="M26 88 L26 52 Q26 36 42 36 L70 36 Q82 36 86 46 Q90 56 100 56 Q106 56 106 64 L106 82 Q106 92 96 92 L40 92 Q26 92 26 88 Z"
+        fill="none" stroke="#f87171" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"
+        stroke-dasharray="0 150 130 400"/>
+  <!-- start/finish marker -->
+  <rect x="21" y="60" width="10" height="4" fill="#fff"/>
+  <rect x="21" y="64" width="10" height="4" fill="#12141a" stroke="#fff" stroke-width="1"/>
+</svg>
