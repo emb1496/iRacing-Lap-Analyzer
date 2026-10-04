@@ -19,7 +19,7 @@
 - **Track map** drawn from GPS and coloured by where time is gained (green) or lost (red).
 - **Line view.** Switch the map to overlay both laps' GPS paths and see how far apart they are at any point. It follows the zoom window, so you can inspect the line through a single corner.
 - **Steering and gear charts** alongside speed, throttle and brake.
-- **Synced charts.** Hovering any chart moves the marker on every chart and on the map.
+- **Track conditions and tyres.** Track and air temperature, wetness, wind and humidity for each lap, flagged when they differ enough to explain part of the gap. Surface temperature across each tyre (inner, middle, outer) and hot pressure are compared per corner, and a synced chart shows tyre temperature around the lap.- **Synced charts.** Hovering any chart moves the marker on every chart and on the map.
 - **Built-in demo session**, so you can try it with no iRacing install.
 
 ## Quick start

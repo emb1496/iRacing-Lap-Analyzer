@@ -26,6 +26,9 @@ WHEELBASE = 2.7
 STEERING_RATIO = 12.0
 ORIGIN_LAT, ORIGIN_LON = 47.0, 8.0
 EARTH_M_PER_DEG = 111_320.0
+TYRE_COLD_C = 50.0
+TYRE_COLD_KPA = 150.0
+TYRE_TAU_S = 5.0  # surface temperature time constant
 
 # Corners of a fictional ~4 km circuit (metres). Corner cutting turns this into a smooth track.
 LAYOUT = [
@@ -124,6 +127,44 @@ def drive_lap(track: Track, driver: DriverProfile) -> dict[str, np.ndarray]:
     }
 
 
+def _tyre_temps(
+    lat_g: np.ndarray, brake: np.ndarray, dt: float
+) -> dict[str, tuple[np.ndarray, str, str]]:
+    """Surface temperatures and hot pressures for four tyres, heated by cornering and braking.
+
+    ``lat_g`` is signed (+ = left turn, loading the right-hand tyres). Each tyre relaxes toward a
+    load-dependent target; camber makes the inside edge run hottest and loaded corners push heat
+    to the outside shoulder, as in real logs.
+    """
+    load = np.clip(np.abs(lat_g) / 1.6, 0, 1)
+    right_share = 0.5 + 0.5 * np.clip(lat_g / 1.6, -1, 1)
+    shares = {"LF": 1 - right_share, "RF": right_share, "LR": 1 - right_share, "RR": right_share}
+    channels: dict[str, tuple[np.ndarray, str, str]] = {}
+    for corner, share in shares.items():
+        front = corner[1] == "F"
+        target = TYRE_COLD_C + 8 + 30 * load * share * 2 + (12 * brake if front else 4 * brake)
+        temp = np.empty_like(target)
+        temp[0] = target[0]
+        for i in range(1, len(target)):
+            temp[i] = temp[i - 1] + (target[i] - temp[i - 1]) * dt / TYRE_TAU_S
+        outer_bias = 8 * (share - 0.5)
+        left_side = corner[0] == "L"
+        # iRacing's L/M/R bands are seen from the driver's seat (see tyre_channel_names)
+        offsets = {"M": 0.0, "L": -4.0 + outer_bias, "R": 5.0}
+        if not left_side:
+            offsets["L"], offsets["R"] = 5.0, -4.0 + outer_bias
+        for band, offset in offsets.items():
+            name = f"{corner}temp{band}"
+            channels[name] = (
+                (temp + offset).astype(np.float32),
+                "C",
+                f"{corner} tire surface {band}",
+            )
+        pressure = TYRE_COLD_KPA * (temp + 273.15) / (TYRE_COLD_C + 273.15)
+        channels[f"{corner}pressure"] = (pressure.astype(np.float32), "kPa", f"{corner} pressure")
+    return channels
+
+
 def _session_yaml(track: Track) -> str:
     return (
         "WeekendInfo:\n"
@@ -165,6 +206,7 @@ def generate_session(
         for key in ("speed", "throttle", "brake", "steering")
     }
     xs = np.concatenate([track.x[idx] for _, idx, _ in pieces])
+    curv = np.concatenate([track.curvature[idx] for _, idx, _ in pieces])
     ys = np.concatenate([track.y[idx] for _, idx, _ in pieces])
 
     v = chans["speed"]
@@ -182,6 +224,10 @@ def generate_session(
     x, y = np.interp(d, dist, xs), np.interp(d, dist, ys)
     lat = ORIGIN_LAT + y / EARTH_M_PER_DEG
     lon = ORIGIN_LON + x / (EARTH_M_PER_DEG * np.cos(np.radians(ORIGIN_LAT)))
+    lat_g = speed**2 * np.interp(d, dist, curv) / G
+    tyres = _tyre_temps(lat_g, np.interp(d, dist, chans["brake"]), 1.0 / tick_rate)
+    # The track cools and dries out a little each lap, and gets damp on the last lap.
+    track_temp = 34.0 - 2.5 * lap_no
     on_pit_road = (lap_no == 0) & (lap_dist < (out_lap_from + 0.1) * L)
 
     f4, f8 = np.float32, np.float64
@@ -203,6 +249,16 @@ def generate_session(
         "Lat": (lat.astype(f8), "deg", "Latitude"),
         "Lon": (lon.astype(f8), "deg", "Longitude"),
         "OnPitRoad": (on_pit_road, "", "Is the player car on pit road"),
+        "TrackTempCrew": (track_temp.astype(f4), "C", "Temperature of track"),
+        "AirTemp": ((23.0 - 0.4 * lap_no).astype(f4), "C", "Temperature of air"),
+        "TrackWetness": (
+            np.where(lap_no >= len(laps), 3, 1).astype(np.int32),
+            "irsdk_TrackWetness",
+            "How wet is the average track surface",
+        ),
+        "WindVel": ((2.0 + 0.8 * lap_no).astype(f4), "m/s", "Wind velocity"),
+        "RelativeHumidity": ((0.55 + 0.03 * lap_no).astype(f4), "%", "Relative Humidity"),
+        **tyres,
     }
     data = write_ibt(channels, tick_rate=tick_rate, session_info=_session_yaml(track))
     return SyntheticSession(ibt=data, track=track, lap_times=lap_times)

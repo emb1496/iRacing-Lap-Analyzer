@@ -29,6 +29,8 @@ export interface LapRef {
   label: string;
 }
 
+export type TyreCorner = "LF" | "RF" | "LR" | "RR";
+
 export interface Trace {
   time: number[];
   speed: number[];
@@ -39,6 +41,8 @@ export interface Trace {
   steering: number[] | null;
   lat: number[] | null;
   lon: number[] | null;
+  /** Mean tyre temperature (°C) per corner, when the file logs it. */
+  tyre_temp: Record<TyreCorner, number[]> | null;
 }
 
 /** Signed, metric. See ``_explain`` in backend/lap_analyzer/analysis/compare.py for meanings. */
@@ -79,4 +83,24 @@ export interface Comparison {
   ref_trace: Trace;
   cmp_trace: Trace;
   corners: Corner[];
+  ref_conditions: Conditions;
+  cmp_conditions: Conditions;
+}
+
+/** Lap medians, metric. */
+export interface TyreSummary {
+  inner: number; // °C
+  middle: number;
+  outer: number;
+  pressure: number | null; // kPa
+}
+
+/** Any scalar is null when the file did not log it. */
+export interface Conditions {
+  track_temp: number | null; // °C
+  air_temp: number | null; // °C
+  wetness: number | null; // 1 (dry) .. 7 (extremely wet)
+  wind_speed: number | null; // km/h
+  humidity: number | null; // %
+  tyres: Partial<Record<TyreCorner, TyreSummary>>;
 }

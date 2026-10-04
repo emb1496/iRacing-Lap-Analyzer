@@ -50,6 +50,10 @@ def test_compare(client, demo_summary):
     assert len(body["delta"]) == n
     assert len(body["ref_trace"]["speed"]) == n
     assert body["corners"] and isinstance(body["corners"][0]["insight"]["reasons"], list)
+    assert set(body["ref_trace"]["tyre_temp"]) == {"LF", "RF", "LR", "RR"}
+    assert len(body["ref_trace"]["tyre_temp"]["LF"]) == n
+    assert body["cmp_conditions"]["track_temp"] < body["ref_conditions"]["track_temp"]
+    assert body["cmp_conditions"]["tyres"]["RF"]["inner"] > 0
 
 
 def test_compare_unknown_lap(client, demo_summary):

@@ -12,6 +12,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from ..ibt import IbtFile, IbtFormatError
+from .conditions import tyre_channel_names
 
 REQUIRED_CHANNELS = ("SessionTime", "Lap", "LapDistPct")
 TRACE_CHANNELS = ("Speed", "Throttle", "Brake", "Gear", "RPM", "SteeringWheelAngle", "Lat", "Lon")
@@ -131,4 +132,6 @@ def resample_lap(ibt: IbtFile, lap: LapInfo, pct_grid: np.ndarray) -> LapTrace:
     }
     if "Gear" in ibt:
         channels["Gear"] = _resample_gear(pct, ibt["Gear"][sl], pct_grid)
+    for key, name in tyre_channel_names(ibt).items():
+        channels[key] = np.interp(pct_grid, pct, ibt[name][sl].astype(float))
     return LapTrace(pct=pct_grid, time=time, channels=channels)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
+from lap_analyzer.models.conditions_out import ConditionsOut
 from lap_analyzer.models.corner_out import CornerOut
 from lap_analyzer.models.lap_ref import LapRef
 from lap_analyzer.models.trace import Trace
@@ -17,3 +18,5 @@ class ComparisonOut(BaseModel):
     ref_trace: Trace
     cmp_trace: Trace
     corners: list[CornerOut]
+    ref_conditions: ConditionsOut
+    cmp_conditions: ConditionsOut

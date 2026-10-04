@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "./api";
+import { ConditionsPanel } from "./components/ConditionsPanel";
 import { CornerTable } from "./components/CornerTable";
 import { type Role, SessionPanel } from "./components/SessionPanel";
 import { TelemetryCharts } from "./components/TelemetryCharts";
@@ -152,6 +153,8 @@ export default function App() {
                 onSelect={(k) => setZoom(cornerRange(k, comparison.track_length))}
               />
             </section>
+
+            <ConditionsPanel comparison={comparison} />
 
             <section className="panel">
               <TelemetryCharts comparison={comparison} onHover={setHoverIndex} zoom={zoom} onZoom={setZoom} />

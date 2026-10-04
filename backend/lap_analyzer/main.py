@@ -12,13 +12,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from lap_analyzer.models.comparison_out import ComparisonOut
+from lap_analyzer.models.conditions_out import ConditionsOut
 from lap_analyzer.models.lap_ref import LapRef
 from lap_analyzer.models.lap_summary import LapSummary
 from lap_analyzer.models.session_summary import SessionSummary
 from lap_analyzer.models.trace import Trace
 
 from . import __version__
-from .analysis import LapTrace, compare_traces
+from .analysis import LapTrace, compare_traces, lap_conditions
+from .analysis.conditions import TYRE_CORNERS, TYRE_POSITIONS
 from .ibt import IbtFile, IbtFormatError
 from .session import Session, SessionStore
 from .synthetic import demo_session
@@ -78,6 +80,11 @@ def _trace_out(trace: LapTrace) -> Trace:
     def opt(name: str, scale: float = 1.0, decimals: int = 2) -> list[float] | None:
         return _rounded(ch[name] * scale, decimals) if name in ch else None
 
+    tyre_temp = {
+        corner: _rounded(np.mean([ch[f"{corner}_{pos}"] for pos in TYRE_POSITIONS], axis=0), 1)
+        for corner in TYRE_CORNERS
+        if all(f"{corner}_{pos}" in ch for pos in TYRE_POSITIONS)
+    }
     return Trace(
         time=_rounded(trace.time, 4),
         speed=_rounded(ch["Speed"] * 3.6, 1),
@@ -88,6 +95,7 @@ def _trace_out(trace: LapTrace) -> Trace:
         steering=opt("SteeringWheelAngle", 1, 3),
         lat=opt("Lat", 1, 7),
         lon=opt("Lon", 1, 7),
+        tyre_temp=tyre_temp or None,
     )
 
 
@@ -144,6 +152,9 @@ def compare(
         label = f"Lap {n}" if ref_s is cmp_s else f"{s.driver}, lap {n}"
         return LapRef(session_id=s.id, lap=n, lap_time=lap.time or 0.0, label=label)
 
+    def conditions(s: Session, n: int, trace: LapTrace) -> ConditionsOut:
+        return ConditionsOut(**asdict(lap_conditions(s.ibt, s.lap(n), trace)))
+
     return ComparisonOut(
         track=ref_s.track,
         track_length=ref_s.track_length,
@@ -154,6 +165,8 @@ def compare(
         ref_trace=_trace_out(result.ref),
         cmp_trace=_trace_out(result.cmp),
         corners=[asdict(c) for c in result.corners],
+        ref_conditions=conditions(ref_s, ref_lap, result.ref),
+        cmp_conditions=conditions(cmp_s, cmp_lap, result.cmp),
     )
 
 
