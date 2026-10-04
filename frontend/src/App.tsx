@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "./api";
 import { ConditionsPanel } from "./components/ConditionsPanel";
 import { CornerTable } from "./components/CornerTable";
@@ -29,7 +29,18 @@ export default function App() {
     cmp: null,
   });
   const [comparison, setComparison] = useState<Comparison | null>(null);
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const [hoverIndex, setHoverState] = useState<number | null>(null);
+  // Coalesce hover updates to one per frame so dragging the mouse doesn't queue renders.
+  const pendingHover = useRef<number | null>(null);
+  const hoverFrame = useRef(0);
+  const setHoverIndex = useCallback((i: number | null) => {
+    pendingHover.current = i;
+    if (hoverFrame.current) return;
+    hoverFrame.current = requestAnimationFrame(() => {
+      hoverFrame.current = 0;
+      setHoverState(pendingHover.current);
+    });
+  }, []);
   const [zoom, setZoom] = useState<Range | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +72,7 @@ export default function App() {
       .compare(ref, cmp, controller.signal)
       .then((result) => {
         setComparison(result);
-        setHoverIndex(null);
+        setHoverState(null);
         setZoom(null);
       })
       .catch((e) => {

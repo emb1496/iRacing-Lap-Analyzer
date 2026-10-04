@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { formatShortDist, indexAt, type Range } from "../format";
 import type { Comparison } from "../types";
 import { useUnits } from "../units";
@@ -23,6 +23,66 @@ const path = (pts: Point[]) =>
 
 /** Stroke widths stay in screen pixels when the line view's camera zooms. */
 const PX = { vectorEffect: "non-scaling-stroke" } as const;
+
+interface Segment {
+  d: string;
+  color: string;
+}
+
+/** Static line-view paths; memoised so hover updates only redraw the dots. */
+const LineLayer = memo(function LineLayer({ points, cmpPoints }: { points: Point[]; cmpPoints: Point[] }) {
+  return (
+    <>
+      <path d={path(points) + "Z"} stroke="var(--track-base)" strokeWidth={12} fill="none" strokeLinejoin="round" {...PX} />
+      <path d={path(points)} stroke="var(--ref)" strokeWidth={2.5} fill="none" strokeLinejoin="round" {...PX} />
+      <path d={path(cmpPoints)} stroke="var(--cmp)" strokeWidth={2.5} fill="none" strokeLinejoin="round" strokeDasharray="6 4" {...PX} />
+    </>
+  );
+});
+
+/** Static delta-view track, zoom highlight and corner labels; memoised like LineLayer. */
+const DeltaLayer = memo(function DeltaLayer({
+  points,
+  segments,
+  zoomLo,
+  zoomHi,
+  comparison: c,
+}: {
+  points: Point[];
+  segments: Segment[];
+  zoomLo: number | null;
+  zoomHi: number | null;
+  comparison: Comparison;
+}) {
+  const n = points.length;
+  const zoomIdx = zoomLo != null && zoomHi != null ? [zoomLo, zoomHi] : null;
+  return (
+    <>
+      <path d={path(points) + "Z"} stroke="var(--track-base)" strokeWidth={10} fill="none" strokeLinejoin="round" />
+      {zoomIdx && (
+        <path
+          d={path(points.slice(zoomIdx[0], zoomIdx[1] + 1))}
+          stroke="var(--text)"
+          strokeWidth={15}
+          fill="none"
+          strokeLinecap="round"
+          opacity={0.85}
+        />
+      )}
+      {segments.map((s, i) => (
+        <path key={i} d={s.d} stroke={s.color} strokeWidth={5} fill="none" strokeLinecap="round" />
+      ))}
+      {c.corners.map((corner) => {
+        const [x, y] = points[indexAt(corner.apex, c.track_length, n)];
+        return (
+          <text key={corner.number} x={x + 8} y={y - 8} className="corner-label">
+            T{corner.number}
+          </text>
+        );
+      })}
+    </>
+  );
+});
 
 /**
  * Track outline from GPS. "Delta" colours it by where the compared lap gains (green)
@@ -124,9 +184,7 @@ export function TrackMap({ comparison: c, hoverIndex, zoom }: Props) {
       <svg viewBox={viewBox} role="img" aria-label={`${c.track} track map`}>
         {lineMode ? (
           <>
-            <path d={path(points) + "Z"} stroke="var(--track-base)" strokeWidth={12} fill="none" strokeLinejoin="round" {...PX} />
-            <path d={path(points)} stroke="var(--ref)" strokeWidth={2.5} fill="none" strokeLinejoin="round" {...PX} />
-            <path d={path(cmpPoints)} stroke="var(--cmp)" strokeWidth={2.5} fill="none" strokeLinejoin="round" strokeDasharray="6 4" {...PX} />
+            <LineLayer points={points} cmpPoints={cmpPoints} />
             {hover && hoverIndex != null && (
               <>
                 <circle cx={cmpPoints[hoverIndex][0]} cy={cmpPoints[hoverIndex][1]} r={4} fill="var(--cmp)" stroke="var(--bg)" strokeWidth={1.5} {...PX} />
@@ -136,28 +194,11 @@ export function TrackMap({ comparison: c, hoverIndex, zoom }: Props) {
           </>
         ) : (
           <>
-            <path d={path(points) + "Z"} stroke="var(--track-base)" strokeWidth={10} fill="none" strokeLinejoin="round" />
-            {zoomIdx && (
-              <path
-                d={path(points.slice(zoomIdx[0], zoomIdx[1] + 1))}
-                stroke="var(--text)"
-                strokeWidth={15}
-                fill="none"
-                strokeLinecap="round"
-                opacity={0.85}
-              />
-            )}
-            {segments.map((s, i) => (
-              <path key={i} d={s.d} stroke={s.color} strokeWidth={5} fill="none" strokeLinecap="round" />
-            ))}
-            {c.corners.map((corner) => {
-              const [x, y] = points[indexAt(corner.apex, c.track_length, n)];
-              return (
-                <text key={corner.number} x={x + 8} y={y - 8} className="corner-label">
-                  T{corner.number}
-                </text>
-              );
-            })}
+            <DeltaLayer points={points} segments={segments}
+              zoomLo={zoomIdx?.[0] ?? null}
+              zoomHi={zoomIdx?.[1] ?? null}
+              comparison={c}
+            />
             {hover && <circle cx={hover[0]} cy={hover[1]} r={7} className="hover-dot" />}
           </>
         )}
