@@ -25,6 +25,45 @@ export function convertSpeed(kmh: number, units: Units): number {
   return units === "imperial" ? kmh * MPH_PER_KMH : kmh;
 }
 
+export function tempUnit(units: Units): string {
+  return units === "imperial" ? "°F" : "°C";
+}
+
+export function convertTemp(c: number, units: Units): number {
+  return units === "imperial" ? (c * 9) / 5 + 32 : c;
+}
+
+/** A temperature *difference*: scales but does not offset. */
+export function convertTempDelta(c: number, units: Units): number {
+  return units === "imperial" ? (c * 9) / 5 : c;
+}
+
+export function formatTemp(c: number, units: Units): string {
+  return `${Math.round(convertTemp(c, units))}${tempUnit(units)}`;
+}
+
+const PSI_PER_KPA = 0.1450377;
+
+export function pressureUnit(units: Units): string {
+  return units === "imperial" ? "psi" : "kPa";
+}
+
+export function convertPressure(kpa: number, units: Units): number {
+  return units === "imperial" ? kpa * PSI_PER_KPA : kpa;
+}
+
+/** iRacing's irsdk_TrackWetness, indexed by value. */
+export const WETNESS_LABELS = [
+  "Unknown",
+  "Dry",
+  "Mostly dry",
+  "Very lightly wet",
+  "Lightly wet",
+  "Moderately wet",
+  "Very wet",
+  "Extremely wet",
+];
+
 export function formatSpeed(kmh: number, units: Units): string {
   return `${Math.round(convertSpeed(kmh, units))} ${speedUnit(units)}`;
 }

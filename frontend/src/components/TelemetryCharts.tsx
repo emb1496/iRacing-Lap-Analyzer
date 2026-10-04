@@ -13,6 +13,7 @@ import {
 import type { MouseHandlerDataParam } from "recharts";
 import {
   convertSpeed,
+  convertTemp,
   cornerRange,
   formatDelta,
   formatLongDist,
@@ -20,8 +21,9 @@ import {
   MIN_ZOOM_SPAN,
   type Range,
   speedUnit,
+  tempUnit,
 } from "../format";
-import type { Comparison } from "../types";
+import type { Comparison, TyreCorner } from "../types";
 import { useUnits } from "../units";
 
 interface Props {
@@ -45,7 +47,11 @@ interface Row {
   cmpSteer?: number;
   refGear?: number;
   cmpGear?: number;
+  refTyre?: number;
+  cmpTyre?: number;
 }
+
+const TYRE_CORNERS: TyreCorner[] = ["LF", "RF", "LR", "RR"];
 
 const RAD_TO_DEG = 180 / Math.PI;
 
@@ -70,6 +76,16 @@ function fitDomain(rows: Row[], keys: (keyof Row)[], range: Range | null): [numb
   return [lo - pad, hi + pad];
 }
 
+function tempAt(
+  temps: Partial<Record<TyreCorner, number[]>> | null,
+  corner: TyreCorner | undefined,
+  i: number,
+  units: "metric" | "imperial",
+): number | undefined {
+  const v = corner && temps?.[corner]?.[i];
+  return v == null ? undefined : convertTemp(v, units);
+}
+
 export function TelemetryCharts({ comparison: c, onHover, zoom, onZoom }: Props) {
   const { units } = useUnits();
   // Brush selection in progress: distances (m) where the drag began and currently is.
@@ -80,6 +96,11 @@ export function TelemetryCharts({ comparison: c, onHover, zoom, onZoom }: Props)
     dragRef.current = r;
     setDragState(r);
   };
+  const tyreCorners = TYRE_CORNERS.filter(
+    (k) => c.ref_trace.tyre_temp?.[k] && c.cmp_trace.tyre_temp?.[k],
+  );
+  const [tyre, setTyre] = useState<TyreCorner>("RF");
+  const shownTyre = tyreCorners.includes(tyre) ? tyre : tyreCorners[0];
   const rows = useMemo<Row[]>(
     () =>
       c.distance.map((d, i) => ({
@@ -95,8 +116,10 @@ export function TelemetryCharts({ comparison: c, onHover, zoom, onZoom }: Props)
         cmpSteer: c.cmp_trace.steering?.[i] != null ? c.cmp_trace.steering[i] * RAD_TO_DEG : undefined,
         refGear: c.ref_trace.gear?.[i],
         cmpGear: c.cmp_trace.gear?.[i],
+        refTyre: tempAt(c.ref_trace.tyre_temp, shownTyre, i, units),
+        cmpTyre: tempAt(c.cmp_trace.tyre_temp, shownTyre, i, units),
       })),
-    [c, units],
+    [c, units, shownTyre],
   );
 
   const indexOf = (state: MouseHandlerDataParam): number | null => {
@@ -199,7 +222,20 @@ export function TelemetryCharts({ comparison: c, onHover, zoom, onZoom }: Props)
   const hasSteering = !!(c.ref_trace.steering && c.cmp_trace.steering);
   const hasGear = !!(c.ref_trace.gear && c.cmp_trace.gear);
   // Only the bottom-most chart shows the distance axis.
-  const axisOn = hasGear ? "gear" : hasSteering ? "steer" : hasPedals ? "pedals" : "speed";
+  const hasTyres = tyreCorners.length > 0;
+  const axisOn = hasTyres
+    ? "tyre"
+    : hasGear
+      ? "gear"
+      : hasSteering
+        ? "steer"
+        : hasPedals
+          ? "pedals"
+          : "speed";
+  const tyreDomain = useMemo(
+    () => fitDomain(rows, ["refTyre", "cmpTyre"], zoom),
+    [rows, zoom],
+  );
   const steerDomain = useMemo(() => {
     const [lo, hi] = fitDomain(rows, ["refSteer", "cmpSteer"], zoom);
     const m = Math.max(Math.abs(lo), Math.abs(hi));
@@ -363,6 +399,46 @@ export function TelemetryCharts({ comparison: c, onHover, zoom, onZoom }: Props)
               {tooltip("")}
               {line("refGear", REF, c.ref.label, false, true)}
               {line("cmpGear", CMP, c.cmp.label, true, true)}
+              {brush}
+            </LineChart>
+          </ResponsiveContainer>
+        </>
+      )}
+
+      {hasTyres && (
+        <>
+          <h3 className="chart-title">
+            <span>
+              Tyre temperature <small>(mean of inner, middle and outer)</small>
+            </span>
+            <span className="chips" role="group" aria-label="Tyre">
+              {tyreCorners.map((k) => (
+                <button
+                  key={k}
+                  className="chip"
+                  aria-pressed={k === shownTyre}
+                  onClick={() => setTyre(k)}
+                >
+                  {k}
+                </button>
+              ))}
+            </span>
+          </h3>
+          <ResponsiveContainer width="100%" height={150}>
+            <LineChart {...shared}>
+              <CartesianGrid stroke="var(--grid)" vertical={false} />
+              {xAxis(axisOn === "tyre")}
+              <YAxis
+                width={48}
+                stroke="var(--muted)"
+                domain={tyreDomain}
+                allowDataOverflow
+                tickFormatter={(v: number) => String(Math.round(v))}
+              />
+              {corners}
+              {tooltip(tempUnit(units), 1)}
+              {line("refTyre", REF, c.ref.label)}
+              {line("cmpTyre", CMP, c.cmp.label)}
               {brush}
             </LineChart>
           </ResponsiveContainer>

@@ -13,3 +13,5 @@ class Trace(BaseModel):
     steering: list[float] | None = None
     lat: list[float] | None = None
     lon: list[float] | None = None
+    # Mean tyre temperature (°C) per tyre keyed LF / RF / LR / RR, when the file logs it
+    tyre_temp: dict[str, list[float]] | None = None
