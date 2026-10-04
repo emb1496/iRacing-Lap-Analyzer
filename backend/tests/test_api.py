@@ -49,7 +49,7 @@ def test_compare(client, demo_summary):
     n = len(body["distance"])
     assert len(body["delta"]) == n
     assert len(body["ref_trace"]["speed"]) == n
-    assert body["corners"] and body["corners"][0]["insight"].startswith("Turn 1")
+    assert body["corners"] and isinstance(body["corners"][0]["insight"]["reasons"], list)
 
 
 def test_compare_unknown_lap(client, demo_summary):

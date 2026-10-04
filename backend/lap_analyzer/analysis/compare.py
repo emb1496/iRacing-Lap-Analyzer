@@ -16,6 +16,21 @@ FULL_THROTTLE = 0.95
 
 
 @dataclass(frozen=True)
+class Reason:
+    """One contributing factor. ``value`` is signed and metric (m, km/h or %), so clients can
+    localise units; its meaning per kind is documented on ``_reasons``."""
+
+    kind: str  # brake_point | brake_new | brake_pressure | apex_speed | throttle_point
+    value: float | None = None
+
+
+@dataclass(frozen=True)
+class Insight:
+    even: bool  # time delta rounds to nothing at the 2dp the UI displays
+    reasons: list[Reason]
+
+
+@dataclass(frozen=True)
 class Corner:
     number: int
     start: float  # metres; segments tile the whole lap, so corner deltas sum to the lap delta
@@ -30,7 +45,7 @@ class Corner:
     cmp_peak_brake: float
     ref_full_throttle: float | None  # metres where full throttle came back after the apex
     cmp_full_throttle: float | None
-    insight: str
+    insight: Insight
 
 
 @dataclass(frozen=True)
@@ -94,32 +109,32 @@ def _full_throttle(throttle: np.ndarray, apex: int, hi: int) -> int | None:
     return apex + int(hits[0]) if hits.size else None
 
 
-def _describe(c: Corner) -> str:
+def _explain(c: Corner) -> Insight:
+    """Reasons the compared lap differs from the reference. Values are cmp relative to ref:
+
+    brake_point: metres earlier (+) / later (-); brake_pressure: % points more (+) / less (-);
+    apex_speed: km/h faster (+) / slower (-); throttle_point: metres later (+) / sooner (-).
+    """
     if round(abs(c.time_delta), 2) < 0.02:  # match the 2dp the UI displays
-        return f"Turn {c.number}: even."
-    verb = "losing" if c.time_delta > 0 else "gaining"
-    reasons = []
+        return Insight(even=True, reasons=[])
+    reasons: list[Reason] = []
     if c.ref_brake is not None and c.cmp_brake is not None:
         diff = c.ref_brake - c.cmp_brake
         if abs(diff) >= 5:
-            reasons.append(f"braking {abs(diff):.0f} m {'earlier' if diff > 0 else 'later'}")
-    elif c.cmp_brake is not None and c.ref_brake is None:
-        reasons.append("braking where the reference lap didn't")
-    if c.ref_brake is not None and c.cmp_brake is not None:
+            reasons.append(Reason("brake_point", diff))
         diff = c.cmp_peak_brake - c.ref_peak_brake
         if abs(diff) >= 8:
-            reasons.append(f"{abs(diff):.0f}% {'less' if diff < 0 else 'more'} brake pressure")
+            reasons.append(Reason("brake_pressure", diff))
+    elif c.cmp_brake is not None and c.ref_brake is None:
+        reasons.append(Reason("brake_new"))
     speed_diff = c.cmp_min_speed - c.ref_min_speed
     if abs(speed_diff) >= 2:
-        reasons.append(
-            f"{abs(speed_diff):.0f} km/h {'slower' if speed_diff < 0 else 'faster'} at the apex"
-        )
+        reasons.append(Reason("apex_speed", speed_diff))
     if c.ref_full_throttle is not None and c.cmp_full_throttle is not None:
         diff = c.cmp_full_throttle - c.ref_full_throttle
         if abs(diff) >= 10:
-            reasons.append(f"full throttle {abs(diff):.0f} m {'later' if diff > 0 else 'sooner'}")
-    why = ", ".join(reasons) if reasons else "no single obvious cause - compare the lines"
-    return f"Turn {c.number}: {verb} {abs(c.time_delta):.2f}s - {why}."
+            reasons.append(Reason("throttle_point", diff))
+    return Insight(even=False, reasons=reasons)
 
 
 def compare_traces(ref: LapTrace, cmp: LapTrace, track_length: float) -> Comparison:
@@ -176,7 +191,7 @@ def compare_traces(ref: LapTrace, cmp: LapTrace, track_length: float) -> Compari
             cmp_peak_brake=c.peak_brake,
             ref_full_throttle=r.full_throttle,
             cmp_full_throttle=c.full_throttle,
-            insight="",
+            insight=Insight(even=True, reasons=[]),
         )
-        corners.append(replace(corner, insight=_describe(corner)))
+        corners.append(replace(corner, insight=_explain(corner)))
     return Comparison(distance=distance, delta=delta, ref=ref, cmp=cmp, corners=corners)

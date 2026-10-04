@@ -10,8 +10,9 @@ import {
   YAxis,
 } from "recharts";
 import type { MouseHandlerDataParam } from "recharts";
-import { formatDelta } from "../format";
+import { convertSpeed, formatDelta, formatLongDist, formatShortDist, speedUnit } from "../format";
 import type { Comparison } from "../types";
+import { useUnits } from "../units";
 
 interface Props {
   comparison: Comparison;
@@ -33,19 +34,20 @@ const REF = "var(--ref)";
 const CMP = "var(--cmp)";
 
 export function TelemetryCharts({ comparison: c, onHover }: Props) {
+  const { units } = useUnits();
   const rows = useMemo<Row[]>(
     () =>
       c.distance.map((d, i) => ({
         d,
         delta: c.delta[i],
-        refSpeed: c.ref_trace.speed[i],
-        cmpSpeed: c.cmp_trace.speed[i],
+        refSpeed: convertSpeed(c.ref_trace.speed[i], units),
+        cmpSpeed: convertSpeed(c.cmp_trace.speed[i], units),
         refThrottle: c.ref_trace.throttle?.[i],
         cmpThrottle: c.cmp_trace.throttle?.[i],
         refBrake: c.ref_trace.brake?.[i],
         cmpBrake: c.cmp_trace.brake?.[i],
       })),
-    [c],
+    [c, units],
   );
 
   const handleMove = (state: MouseHandlerDataParam) => {
@@ -67,7 +69,7 @@ export function TelemetryCharts({ comparison: c, onHover }: Props) {
       type="number"
       domain={[0, c.track_length]}
       hide={!show}
-      tickFormatter={(m: number) => `${(m / 1000).toFixed(1)} km`}
+      tickFormatter={(m: number) => formatLongDist(m, units)}
       stroke="var(--muted)"
     />
   );
@@ -84,7 +86,7 @@ export function TelemetryCharts({ comparison: c, onHover }: Props) {
   const tooltip = (unit: string, digits = 0) => (
     <Tooltip
       contentStyle={{ background: "var(--panel)", border: "1px solid var(--border)" }}
-      labelFormatter={(m) => `${Math.round(Number(m))} m`}
+      labelFormatter={(m) => formatShortDist(Number(m), units)}
       formatter={(v) => `${Number(v).toFixed(digits)} ${unit}`}
       isAnimationActive={false}
     />
@@ -130,7 +132,7 @@ export function TelemetryCharts({ comparison: c, onHover }: Props) {
           <ReferenceLine y={0} stroke="var(--grid-strong)" />
           <Tooltip
             contentStyle={{ background: "var(--panel)", border: "1px solid var(--border)" }}
-            labelFormatter={(m) => `${Math.round(Number(m))} m`}
+            labelFormatter={(m) => formatShortDist(Number(m), units)}
             formatter={(v) => `${formatDelta(Number(v))} s`}
             isAnimationActive={false}
           />
@@ -145,7 +147,7 @@ export function TelemetryCharts({ comparison: c, onHover }: Props) {
           {xAxis(!hasPedals)}
           <YAxis width={48} stroke="var(--muted)" unit="" />
           {corners}
-          {tooltip("km/h")}
+          {tooltip(speedUnit(units))}
           {line("refSpeed", REF, c.ref.label)}
           {line("cmpSpeed", CMP, c.cmp.label)}
         </LineChart>
