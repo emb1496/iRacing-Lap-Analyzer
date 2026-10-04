@@ -1,5 +1,7 @@
-import { formatDelta, formatMetres, indexAt } from "../format";
+import { convertSpeed, formatDelta, formatShortDist, indexAt, speedUnit } from "../format";
+import { describeCorner } from "../insight";
 import type { Comparison } from "../types";
+import { useUnits } from "../units";
 
 interface Props {
   comparison: Comparison;
@@ -7,6 +9,7 @@ interface Props {
 }
 
 export function CornerTable({ comparison: c, onHover }: Props) {
+  const { units } = useUnits();
   const worst = Math.max(...c.corners.map((k) => k.time_delta));
 
   return (
@@ -16,7 +19,7 @@ export function CornerTable({ comparison: c, onHover }: Props) {
           <tr>
             <th>Turn</th>
             <th>Δ</th>
-            <th>Apex km/h</th>
+            <th>Apex {speedUnit(units)}</th>
             <th>Brake point</th>
             <th>What happened</th>
           </tr>
@@ -34,14 +37,14 @@ export function CornerTable({ comparison: c, onHover }: Props) {
                 {formatDelta(k.time_delta, 2)}
               </td>
               <td className="mono">
-                <span className="ref">{Math.round(k.ref_min_speed)}</span> /{" "}
-                <span className="cmp">{Math.round(k.cmp_min_speed)}</span>
+                <span className="ref">{Math.round(convertSpeed(k.ref_min_speed, units))}</span> /{" "}
+                <span className="cmp">{Math.round(convertSpeed(k.cmp_min_speed, units))}</span>
               </td>
               <td className="mono">
-                <span className="ref">{formatMetres(k.ref_brake)}</span> /{" "}
-                <span className="cmp">{formatMetres(k.cmp_brake)}</span>
+                <span className="ref">{formatShortDist(k.ref_brake, units)}</span> /{" "}
+                <span className="cmp">{formatShortDist(k.cmp_brake, units)}</span>
               </td>
-              <td className="insight">{k.insight.replace(/^Turn \d+: /, "")}</td>
+              <td className="insight">{describeCorner(k, units)}</td>
             </tr>
           ))}
         </tbody>

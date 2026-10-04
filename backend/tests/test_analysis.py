@@ -53,16 +53,21 @@ def test_finds_every_corner_of_the_synthetic_track(session):
     assert 7 <= len(apexes) <= 10
 
 
+def _reason(corner, kind, default=None):
+    found = [r.value for r in corner.insight.reasons if r.kind == kind]
+    return found[0] if found else default
+
+
 def test_insights_explain_where_and_why_time_was_lost(session):
     # Lap 3 brakes at 80% capability everywhere and over-slows the corner at ~61% of the lap.
     corners = _compare(session, 2, 3).corners
     worst = max(corners, key=lambda c: c.time_delta)
     assert 0.57 <= worst.apex / session.track_length <= 0.65
-    assert "losing" in worst.insight
-    assert "slower at the apex" in worst.insight
-    assert any("earlier" in c.insight for c in corners)
+    assert worst.time_delta > 0
+    assert _reason(worst, "apex_speed") < 0  # slower at the apex
+    assert any(_reason(c, "brake_point", 0) > 0 for c in corners)  # braked earlier
     braked = [c for c in corners if c.ref_brake is not None and abs(c.time_delta) >= 0.02]
-    assert braked and all("20% less brake pressure" in c.insight for c in braked)
+    assert braked and all(_reason(c, "brake_pressure") == pytest.approx(-20, abs=1) for c in braked)
 
 
 def test_identical_laps_are_even():
@@ -72,4 +77,4 @@ def test_identical_laps_are_even():
     session = Session(IbtFile.from_bytes(synthetic.ibt), "same.ibt")
     result = _compare(session, 1, 2)
     assert np.abs(result.delta).max() < 0.01
-    assert all(c.insight.endswith("even.") for c in result.corners)
+    assert all(c.insight.even and not c.insight.reasons for c in result.corners)

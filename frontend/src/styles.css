@@ -109,6 +109,26 @@ code {
 .topbar .track {
   color: var(--muted);
 }
+.unit-toggle {
+  margin-left: auto;
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.unit-toggle button {
+  background: none;
+  border: 0;
+  color: var(--muted);
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.unit-toggle button[aria-pressed="true"] {
+  background: var(--accent);
+  color: #fff;
+}
 
 main {
   padding: 20px;

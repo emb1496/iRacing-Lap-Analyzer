@@ -41,6 +41,17 @@ export interface Trace {
   lon: number[] | null;
 }
 
+/** Signed, metric. See ``_explain`` in backend/lap_analyzer/analysis/compare.py for meanings. */
+export interface Reason {
+  kind: "brake_point" | "brake_new" | "brake_pressure" | "apex_speed" | "throttle_point";
+  value: number | null;
+}
+
+export interface Insight {
+  even: boolean;
+  reasons: Reason[];
+}
+
 export interface Corner {
   number: number;
   start: number;
@@ -55,7 +66,7 @@ export interface Corner {
   cmp_peak_brake: number;
   ref_full_throttle: number | null;
   cmp_full_throttle: number | null;
-  insight: string;
+  insight: Insight;
 }
 
 export interface Comparison {

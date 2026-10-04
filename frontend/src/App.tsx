@@ -5,7 +5,9 @@ import { type Role, SessionPanel } from "./components/SessionPanel";
 import { TelemetryCharts } from "./components/TelemetryCharts";
 import { TrackMap } from "./components/TrackMap";
 import { formatDelta, formatLapTime } from "./format";
+import { describeCorner } from "./insight";
 import type { Comparison, LapSelection, SessionSummary } from "./types";
+import { useUnits } from "./units";
 
 /** Default pick for a freshly loaded session: best lap vs. the most recent other lap. */
 function defaultSelection(s: SessionSummary): Record<Role, LapSelection | null> {
@@ -19,6 +21,7 @@ function defaultSelection(s: SessionSummary): Record<Role, LapSelection | null> 
 }
 
 export default function App() {
+  const { units, setUnits } = useUnits();
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [selection, setSelection] = useState<Record<Role, LapSelection | null>>({
     ref: null,
@@ -77,6 +80,13 @@ export default function App() {
           Lap<span>Analyzer</span>
         </h1>
         {comparison && <span className="track">{comparison.track}</span>}
+        <div className="unit-toggle" role="group" aria-label="Units">
+          {(["metric", "imperial"] as const).map((u) => (
+            <button key={u} aria-pressed={units === u} onClick={() => setUnits(u)}>
+              {u === "metric" ? "km · m" : "mi · ft"}
+            </button>
+          ))}
+        </div>
       </header>
 
       <SessionPanel
@@ -127,7 +137,7 @@ export default function App() {
               {worst && worst.time_delta > 0.02 && (
                 <div className="stat headline">
                   <label>Biggest loss</label>
-                  <span>{worst.insight}</span>
+                  <span>Turn {worst.number}: {describeCorner(worst, units)}</span>
                 </div>
               )}
             </section>
