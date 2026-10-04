@@ -116,7 +116,7 @@ Interactive docs are at http://localhost:8000/docs while the backend is running.
 
 - [X] Zoom and brush on the charts to inspect a single corner
 - [X] Steering and gear overlays; a "line" view comparing GPS paths
-- [ ] Track conditions comparison
+- [X] Track conditions comparison
 - [ ] Persist sessions (SQLite + file storage) instead of the in-memory store
 - [ ] Reference lap library: compare against shared laps from faster drivers on the same car and track
 - [ ] Live mode: read iRacing's shared-memory telemetry while driving and show a real-time delta
