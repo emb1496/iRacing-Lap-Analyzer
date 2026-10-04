@@ -112,7 +112,7 @@ Interactive docs are at http://localhost:8000/docs while the backend is running.
 
 ## Roadmap
 
-- [ ] Zoom and brush on the charts to inspect a single corner
+- [X] Zoom and brush on the charts to inspect a single corner
 - [ ] Steering and gear overlays; a "line" view comparing GPS paths
 - [ ] Track conditions comparison
 - [ ] Persist sessions (SQLite + file storage) instead of the in-memory store
