@@ -94,6 +94,23 @@ def split_laps(ibt: IbtFile) -> list[LapInfo]:
     return laps
 
 
+def _resample_gear(pct: np.ndarray, gear: np.ndarray, pct_grid: np.ndarray) -> np.ndarray:
+    """Gear is categorical: hold the last sample rather than interpolating between gears.
+
+    iRacing reports 0 (neutral) while the shift itself is in progress, which is not a gear
+    the driver chose, so those samples keep the previous gear until the next one engages.
+    """
+    g = gear.astype(float)
+    valid = g > 0
+    if not valid.any():
+        return np.zeros(len(pct_grid))
+    # Index of the most recent valid sample at each point (leading gaps take the first valid).
+    last = np.maximum.accumulate(np.where(valid, np.arange(len(g)), -1))
+    g = g[np.where(last < 0, np.flatnonzero(valid)[0], last)]
+    idx = np.clip(np.searchsorted(pct, pct_grid, side="right") - 1, 0, len(g) - 1)
+    return g[idx]
+
+
 def resample_lap(ibt: IbtFile, lap: LapInfo, pct_grid: np.ndarray) -> LapTrace:
     if not lap.complete or lap.start_time is None or lap.time is None:
         raise ValueError(f"lap {lap.number} is incomplete")
@@ -110,8 +127,8 @@ def resample_lap(ibt: IbtFile, lap: LapInfo, pct_grid: np.ndarray) -> LapTrace:
     channels = {
         name: np.interp(pct_grid, pct, ibt[name][sl].astype(float))
         for name in TRACE_CHANNELS
-        if name in ibt
+        if name != "Gear" and name in ibt
     }
-    if "Gear" in channels:
-        channels["Gear"] = np.round(channels["Gear"])
+    if "Gear" in ibt:
+        channels["Gear"] = _resample_gear(pct, ibt["Gear"][sl], pct_grid)
     return LapTrace(pct=pct_grid, time=time, channels=channels)

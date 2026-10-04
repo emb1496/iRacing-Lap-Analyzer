@@ -17,6 +17,8 @@
 - **Automatic corner detection** from the speed trace, with no per-track configuration.
 - **Per-corner coaching insights.** Brake point, brake pressure, apex speed and throttle pickup are compared and summarised.
 - **Track map** drawn from GPS and coloured by where time is gained (green) or lost (red).
+- **Line view.** Switch the map to overlay both laps' GPS paths and see how far apart they are at any point. It follows the zoom window, so you can inspect the line through a single corner.
+- **Steering and gear charts** alongside speed, throttle and brake.
 - **Synced charts.** Hovering any chart moves the marker on every chart and on the map.
 - **Built-in demo session**, so you can try it with no iRacing install.
 
@@ -113,7 +115,7 @@ Interactive docs are at http://localhost:8000/docs while the backend is running.
 ## Roadmap
 
 - [X] Zoom and brush on the charts to inspect a single corner
-- [ ] Steering and gear overlays; a "line" view comparing GPS paths
+- [X] Steering and gear overlays; a "line" view comparing GPS paths
 - [ ] Track conditions comparison
 - [ ] Persist sessions (SQLite + file storage) instead of the in-memory store
 - [ ] Reference lap library: compare against shared laps from faster drivers on the same car and track

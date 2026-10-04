@@ -41,7 +41,13 @@ interface Row {
   cmpThrottle?: number;
   refBrake?: number;
   cmpBrake?: number;
+  refSteer?: number;
+  cmpSteer?: number;
+  refGear?: number;
+  cmpGear?: number;
 }
+
+const RAD_TO_DEG = 180 / Math.PI;
 
 const REF = "var(--ref)";
 const CMP = "var(--cmp)";
@@ -85,6 +91,10 @@ export function TelemetryCharts({ comparison: c, onHover, zoom, onZoom }: Props)
         cmpThrottle: c.cmp_trace.throttle?.[i],
         refBrake: c.ref_trace.brake?.[i],
         cmpBrake: c.cmp_trace.brake?.[i],
+        refSteer: c.ref_trace.steering?.[i] != null ? c.ref_trace.steering[i] * RAD_TO_DEG : undefined,
+        cmpSteer: c.cmp_trace.steering?.[i] != null ? c.cmp_trace.steering[i] * RAD_TO_DEG : undefined,
+        refGear: c.ref_trace.gear?.[i],
+        cmpGear: c.cmp_trace.gear?.[i],
       })),
     [c, units],
   );
@@ -172,10 +182,11 @@ export function TelemetryCharts({ comparison: c, onHover, zoom, onZoom }: Props)
     />
   );
 
-  const line = (key: keyof Row, color: string, name: string, dashed = false) => (
+  const line = (key: keyof Row, color: string, name: string, dashed = false, step = false) => (
     <Line
       dataKey={key}
       name={name}
+      type={step ? "stepAfter" : "linear"}
       stroke={color}
       dot={false}
       strokeWidth={1.5}
@@ -184,7 +195,20 @@ export function TelemetryCharts({ comparison: c, onHover, zoom, onZoom }: Props)
     />
   );
 
-  const hasPedals = c.ref_trace.throttle && c.ref_trace.brake;
+  const hasPedals = !!(c.ref_trace.throttle && c.ref_trace.brake);
+  const hasSteering = !!(c.ref_trace.steering && c.cmp_trace.steering);
+  const hasGear = !!(c.ref_trace.gear && c.cmp_trace.gear);
+  // Only the bottom-most chart shows the distance axis.
+  const axisOn = hasGear ? "gear" : hasSteering ? "steer" : hasPedals ? "pedals" : "speed";
+  const steerDomain = useMemo(() => {
+    const [lo, hi] = fitDomain(rows, ["refSteer", "cmpSteer"], zoom);
+    const m = Math.max(Math.abs(lo), Math.abs(hi));
+    return [-m, m] as [number, number];
+  }, [rows, zoom]);
+  const gearDomain = useMemo(() => {
+    const [lo, hi] = fitDomain(rows, ["refGear", "cmpGear"], zoom);
+    return [Math.max(0, Math.floor(lo + 0.5)), Math.ceil(hi - 0.5)] as [number, number];
+  }, [rows, zoom]);
 
   return (
     <div
@@ -257,7 +281,7 @@ export function TelemetryCharts({ comparison: c, onHover, zoom, onZoom }: Props)
       <ResponsiveContainer width="100%" height={220}>
         <LineChart {...shared}>
           <CartesianGrid stroke="var(--grid)" vertical={false} />
-          {xAxis(!hasPedals)}
+          {xAxis(axisOn === "speed")}
           <YAxis
             width={48}
             stroke="var(--muted)"
@@ -279,7 +303,7 @@ export function TelemetryCharts({ comparison: c, onHover, zoom, onZoom }: Props)
           <ResponsiveContainer width="100%" height={160}>
             <LineChart {...shared}>
               <CartesianGrid stroke="var(--grid)" vertical={false} />
-              {xAxis(true)}
+              {xAxis(axisOn === "pedals")}
               <YAxis width={48} stroke="var(--muted)" domain={[0, 100]} />
               {corners}
               {tooltip("%")}
@@ -287,6 +311,58 @@ export function TelemetryCharts({ comparison: c, onHover, zoom, onZoom }: Props)
               {line("cmpThrottle", CMP, `${c.cmp.label} throttle`)}
               {line("refBrake", REF, `${c.ref.label} brake`, true)}
               {line("cmpBrake", CMP, `${c.cmp.label} brake`, true)}
+              {brush}
+            </LineChart>
+          </ResponsiveContainer>
+        </>
+      )}
+
+      {hasSteering && (
+        <>
+          <h3>
+            Steering <small>(degrees at the wheel)</small>
+          </h3>
+          <ResponsiveContainer width="100%" height={140}>
+            <LineChart {...shared}>
+              <CartesianGrid stroke="var(--grid)" vertical={false} />
+              {xAxis(axisOn === "steer")}
+              <YAxis
+                width={48}
+                stroke="var(--muted)"
+                domain={steerDomain}
+                allowDataOverflow
+                tickFormatter={(v: number) => String(Math.round(v))}
+              />
+              {corners}
+              <ReferenceLine y={0} stroke="var(--grid-strong)" />
+              {tooltip("°")}
+              {line("refSteer", REF, c.ref.label)}
+              {line("cmpSteer", CMP, c.cmp.label)}
+              {brush}
+            </LineChart>
+          </ResponsiveContainer>
+        </>
+      )}
+
+      {hasGear && (
+        <>
+          <h3>Gear</h3>
+          <ResponsiveContainer width="100%" height={110}>
+            <LineChart {...shared}>
+              <CartesianGrid stroke="var(--grid)" vertical={false} />
+              {xAxis(axisOn === "gear")}
+              <YAxis
+                width={48}
+                stroke="var(--muted)"
+                domain={gearDomain}
+                allowDataOverflow
+                allowDecimals={false}
+                interval={0}
+              />
+              {corners}
+              {tooltip("")}
+              {line("refGear", REF, c.ref.label, false, true)}
+              {line("cmpGear", CMP, c.cmp.label, true, true)}
               {brush}
             </LineChart>
           </ResponsiveContainer>

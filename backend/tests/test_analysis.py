@@ -78,3 +78,14 @@ def test_identical_laps_are_even():
     result = _compare(session, 1, 2)
     assert np.abs(result.delta).max() < 0.01
     assert all(c.insight.even and not c.insight.reasons for c in result.corners)
+
+
+def test_gear_ignores_neutral_during_shifts_and_never_blends_gears():
+    from lap_analyzer.analysis.laps import _resample_gear
+
+    pct = np.linspace(0, 1, 11)
+    gear = np.array([0, 4, 4, 0, 5, 5, 0, 0, 3, 3, 3], dtype=np.int32)
+    out = _resample_gear(pct, gear, np.linspace(0, 1, 101))
+    assert set(np.unique(out)) == {3.0, 4.0, 5.0}  # no 0s, no interpolated 1s/2s
+    assert out[0] == 4  # leading neutral takes the first real gear
+    assert out[35] == 4 and out[50] == 5 and out[75] == 5  # held through the shift
