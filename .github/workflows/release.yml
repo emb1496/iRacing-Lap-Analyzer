@@ -27,7 +27,7 @@ jobs:
       - working-directory: backend
         run: |
           pip install -e ".[desktop]" pyinstaller
-          pyinstaller --noconfirm --onefile --windowed --name LapAnalyzer `
+          pyinstaller --noconfirm --onefile --windowed --icon ../docs/logo.ico --name LapAnalyzer `
             --add-data "../frontend/dist;frontend_dist" `
             --collect-submodules uvicorn `
             lap_analyzer/desktop.py
