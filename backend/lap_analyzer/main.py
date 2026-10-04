@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import sys
 from dataclasses import asdict
+from pathlib import Path
 
 import numpy as np
 from fastapi import FastAPI, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from lap_analyzer.models.comparison_out import ComparisonOut
 from lap_analyzer.models.lap_ref import LapRef
@@ -152,3 +155,17 @@ def compare(
         cmp_trace=_trace_out(result.cmp),
         corners=[asdict(c) for c in result.corners],
     )
+
+
+def _frontend_dir() -> Path | None:
+    """Built frontend: bundled by PyInstaller, or ../frontend/dist in a checkout."""
+    if getattr(sys, "frozen", False):
+        candidate = Path(sys._MEIPASS) / "frontend_dist"  # type: ignore[attr-defined]
+    else:
+        candidate = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+    return candidate if (candidate / "index.html").is_file() else None
+
+
+# Registered last so it never shadows the /api routes.
+if (_dist := _frontend_dir()) is not None:
+    app.mount("/", StaticFiles(directory=_dist, html=True), name="frontend")

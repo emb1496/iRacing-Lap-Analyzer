@@ -40,6 +40,24 @@ npm run dev
 
 Open http://localhost:5173 and click **Try the demo session**. To use your own laps, enable telemetry logging in iRacing (Alt+L in the car), then drag a file from `Documents\iRacing\telemetry` onto the sidebar.
 
+## Desktop app (Windows)
+
+Download `LapAnalyzer.exe` from the [latest release](https://github.com/emb1496/lap-analyzer/releases/latest) and run it. It opens a native window, with no browser or terminal needed. It uses the WebView2 runtime that ships with Windows 10/11. The exe is unsigned, so SmartScreen may warn on first launch (More info → Run anyway).
+
+To run the desktop window from source, or build the exe yourself:
+
+```bash
+cd frontend && npm install && npm run build
+cd ../backend
+pip install -e ".[desktop]"
+python -m lap_analyzer.desktop       # native window
+
+pip install pyinstaller
+pyinstaller --onefile --windowed --name LapAnalyzer --add-data "../frontend/dist;frontend_dist" --collect-submodules uvicorn lap_analyzer/desktop.py
+```
+
+Releases are built by CI: push a tag like `v0.1.0` and `LapAnalyzer.exe` is attached to a GitHub Release.
+
 ## Architecture
 
 ```
