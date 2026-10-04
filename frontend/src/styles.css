@@ -415,8 +415,19 @@ td {
 .charts .recharts-wrapper {
   cursor: crosshair;
 }
+.charts {
+  position: relative;
+}
 .charts.brushing {
   user-select: none;
+}
+.charts .brush {
+  display: none;
+  position: absolute;
+  background: var(--text);
+  opacity: 0.12;
+  pointer-events: none;
+  z-index: 1;
 }
 .corners tbody tr {
   cursor: pointer;

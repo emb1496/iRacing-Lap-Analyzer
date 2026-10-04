@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import {
   Area,
   CartesianGrid,
   ComposedChart,
   Line,
   LineChart,
-  ReferenceArea,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -57,6 +56,10 @@ const TYRE_CORNERS: TyreCorner[] = ["LF", "RF", "LR", "RR"];
 
 const RAD_TO_DEG = 180 / Math.PI;
 
+// Plot-area insets shared by every chart: y-axis width and right margin.
+const PLOT_LEFT = 48;
+const PLOT_RIGHT = 16;
+
 const REF = "var(--ref)";
 const CMP = "var(--cmp)";
 
@@ -88,15 +91,47 @@ function tempAt(
   return v == null ? undefined : convertTemp(v, units);
 }
 
-export function TelemetryCharts({ comparison: c, onHover, zoom, onZoom }: Props) {
+// Memoised: hover changes in App must not re-render these (thousands of points each).
+export const TelemetryCharts = memo(function TelemetryCharts({
+  comparison: c,
+  onHover,
+  zoom,
+  onZoom,
+}: Props) {
   const { units } = useUnits();
   // Brush selection in progress: distances (m) where the drag began and currently is.
-  const [drag, setDragState] = useState<Range | null>(null);
-  // Mirrors `drag` synchronously so a fast click's mouseup sees the mousedown.
+  // Kept in a ref and painted straight onto an overlay, so dragging never re-renders the charts.
   const dragRef = useRef<Range | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const chartsEl = useRef<HTMLDivElement>(null);
+  const barEl = useRef<HTMLDivElement>(null);
+  const brushEl = useRef<HTMLDivElement>(null);
+  const domainRef = useRef<Range>([0, 1]);
+  const paintBrush = () => {
+    const el = brushEl.current;
+    const root = chartsEl.current;
+    const d = dragRef.current;
+    if (!el || !root) return;
+    if (!d || d[0] === d[1]) {
+      el.style.display = "none";
+      return;
+    }
+    // The plot area spans from the y-axis (width 48) to the chart's right margin (16).
+    const [d0, d1] = domainRef.current;
+    const plotW = root.clientWidth - PLOT_LEFT - PLOT_RIGHT;
+    const x = (m: number) => PLOT_LEFT + ((m - d0) / (d1 - d0)) * plotW;
+    const top = barEl.current?.offsetHeight ?? 0;
+    el.style.display = "block";
+    el.style.left = `${x(Math.min(...d))}px`;
+    el.style.width = `${Math.abs(x(d[1]) - x(d[0]))}px`;
+    el.style.top = `${top}px`;
+    el.style.height = `${root.clientHeight - top}px`;
+  };
   const setDrag = (r: Range | null) => {
+    const was = dragRef.current != null;
     dragRef.current = r;
-    setDragState(r);
+    if ((r != null) !== was) setDragging(r != null);
+    paintBrush();
   };
   const tyreCorners = TYRE_CORNERS.filter(
     (k) => c.ref_trace.tyre_temp?.[k] && c.cmp_trace.tyre_temp?.[k],
@@ -141,7 +176,7 @@ export function TelemetryCharts({ comparison: c, onHover, zoom, onZoom }: Props)
 
   // A drag released outside the chart still ends the brush.
   useEffect(() => {
-    if (!drag) return;
+    if (!dragging) return;
     window.addEventListener("mouseup", commitDrag);
     return () => window.removeEventListener("mouseup", commitDrag);
   });
@@ -163,14 +198,12 @@ export function TelemetryCharts({ comparison: c, onHover, zoom, onZoom }: Props)
   };
 
   const domain: Range = zoom ?? [0, c.track_length];
+  domainRef.current = domain;
   const speedDomain = useMemo(
     () => fitDomain(rows, ["refSpeed", "cmpSpeed"], zoom),
     [rows, zoom],
   );
   const deltaDomain = useMemo(() => fitDomain(rows, ["delta"], zoom), [rows, zoom]);
-  const brush = drag && drag[0] !== drag[1] && (
-    <ReferenceArea x1={drag[0]} x2={drag[1]} fill="var(--text)" fillOpacity={0.12} stroke="none" />
-  );
 
   const xAxis = (show: boolean) => (
     <XAxis
@@ -264,11 +297,13 @@ export function TelemetryCharts({ comparison: c, onHover, zoom, onZoom }: Props)
 
   return (
     <div
-      className={`charts${drag ? " brushing" : ""}`}
+      ref={chartsEl}
+      className={`charts${dragging ? " brushing" : ""}`}
       onDoubleClick={() => onZoom(null)}
       onMouseUp={commitDrag}
     >
-      <div className="zoom-bar">
+      <div className="brush" ref={brushEl} />
+      <div className="zoom-bar" ref={barEl}>
         <span className="hint">
           {zoom
             ? `Showing ${formatShortDist(zoom[0], units)} – ${formatShortDist(zoom[1], units)}`
@@ -325,7 +360,6 @@ export function TelemetryCharts({ comparison: c, onHover, zoom, onZoom }: Props)
             isAnimationActive={false}
           />
           {line("delta", "var(--text)", "Delta")}
-          {brush}
         </LineChart>
       </ResponsiveContainer>
 
@@ -345,7 +379,6 @@ export function TelemetryCharts({ comparison: c, onHover, zoom, onZoom }: Props)
           {tooltip(speedUnit(units))}
           {line("refSpeed", REF, c.ref.label)}
           {line("cmpSpeed", CMP, c.cmp.label)}
-          {brush}
         </LineChart>
       </ResponsiveContainer>
 
@@ -361,7 +394,6 @@ export function TelemetryCharts({ comparison: c, onHover, zoom, onZoom }: Props)
               {tooltip("%")}
               {line("refThrottle", REF, c.ref.label)}
               {line("cmpThrottle", CMP, c.cmp.label)}
-              {brush}
             </LineChart>
           </ResponsiveContainer>
 
@@ -380,7 +412,6 @@ export function TelemetryCharts({ comparison: c, onHover, zoom, onZoom }: Props)
               {tooltip("%")}
               {area("refBrake", REF, c.ref.label)}
               {area("cmpBrake", CMP, c.cmp.label)}
-              {brush}
             </ComposedChart>
           </ResponsiveContainer>
         </>
@@ -407,7 +438,6 @@ export function TelemetryCharts({ comparison: c, onHover, zoom, onZoom }: Props)
               {tooltip("°")}
               {line("refSteer", REF, c.ref.label)}
               {line("cmpSteer", CMP, c.cmp.label)}
-              {brush}
             </LineChart>
           </ResponsiveContainer>
         </>
@@ -432,7 +462,6 @@ export function TelemetryCharts({ comparison: c, onHover, zoom, onZoom }: Props)
               {tooltip("")}
               {line("refGear", REF, c.ref.label, false, true)}
               {line("cmpGear", CMP, c.cmp.label, true, true)}
-              {brush}
             </LineChart>
           </ResponsiveContainer>
         </>
@@ -472,11 +501,10 @@ export function TelemetryCharts({ comparison: c, onHover, zoom, onZoom }: Props)
               {tooltip(tempUnit(units), 1)}
               {line("refTyre", REF, c.ref.label)}
               {line("cmpTyre", CMP, c.cmp.label)}
-              {brush}
             </LineChart>
           </ResponsiveContainer>
         </>
       )}
     </div>
   );
-}
+});
