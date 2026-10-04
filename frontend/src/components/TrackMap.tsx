@@ -1,10 +1,11 @@
 import { useMemo } from "react";
-import { indexAt } from "../format";
+import { indexAt, type Range } from "../format";
 import type { Comparison } from "../types";
 
 interface Props {
   comparison: Comparison;
   hoverIndex: number | null;
+  zoom: Range | null;
 }
 
 const SIZE = 400;
@@ -16,7 +17,7 @@ const CHUNK = 6; // grid points per coloured track segment
  * Track outline from GPS, coloured by where the compared lap gains (green) or
  * loses (red) time against the reference.
  */
-export function TrackMap({ comparison: c, hoverIndex }: Props) {
+export function TrackMap({ comparison: c, hoverIndex, zoom }: Props) {
   const geometry = useMemo(() => {
     const { lat, lon } = c.ref_trace;
     if (!lat || !lon) return null;
@@ -62,6 +63,12 @@ export function TrackMap({ comparison: c, hoverIndex }: Props) {
   if (!geometry) return <div className="panel map empty">No GPS channels in this file.</div>;
   const { points, segments } = geometry;
   const hover = hoverIndex != null ? points[hoverIndex] : null;
+  const zoomPath = zoom
+    ? points
+        .slice(indexAt(zoom[0], c.track_length, points.length), indexAt(zoom[1], c.track_length, points.length) + 1)
+        .map(([x, y], k) => `${k ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`)
+        .join("")
+    : null;
 
   return (
     <div className="panel map">
@@ -73,6 +80,9 @@ export function TrackMap({ comparison: c, hoverIndex }: Props) {
           fill="none"
           strokeLinejoin="round"
         />
+        {zoomPath && (
+          <path d={zoomPath} stroke="var(--text)" strokeWidth={15} fill="none" strokeLinecap="round" opacity={0.85} />
+        )}
         {segments.map((s, i) => (
           <path key={i} d={s.d} stroke={s.color} strokeWidth={5} fill="none" strokeLinecap="round" />
         ))}

@@ -1,14 +1,15 @@
 import { convertSpeed, formatDelta, formatShortDist, indexAt, speedUnit } from "../format";
 import { describeCorner } from "../insight";
-import type { Comparison } from "../types";
+import type { Comparison, Corner } from "../types";
 import { useUnits } from "../units";
 
 interface Props {
   comparison: Comparison;
   onHover: (index: number | null) => void;
+  onSelect: (corner: Corner) => void;
 }
 
-export function CornerTable({ comparison: c, onHover }: Props) {
+export function CornerTable({ comparison: c, onHover, onSelect }: Props) {
   const { units } = useUnits();
   const worst = Math.max(...c.corners.map((k) => k.time_delta));
 
@@ -31,6 +32,8 @@ export function CornerTable({ comparison: c, onHover }: Props) {
               className={k.time_delta === worst && worst > 0.02 ? "worst" : ""}
               onMouseEnter={() => onHover(indexAt(k.apex, c.track_length, c.distance.length))}
               onMouseLeave={() => onHover(null)}
+              onClick={() => onSelect(k)}
+              title="Click to zoom the charts to this corner"
             >
               <td>T{k.number}</td>
               <td className={`mono ${k.time_delta > 0.02 ? "loss" : k.time_delta < -0.02 ? "gain" : ""}`}>
