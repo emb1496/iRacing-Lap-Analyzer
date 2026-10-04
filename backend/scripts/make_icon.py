@@ -40,7 +40,12 @@ def sample_path() -> list[tuple[float, float]]:
             for i in range(1, 41):
                 t = i / 40
                 u = 1 - t
-                pts.append((u*u*x0 + 2*u*t*cx + t*t*x1, u*u*y0 + 2*u*t*cy + t*t*y1))
+                pts.append(
+                    (
+                        u * u * x0 + 2 * u * t * cx + t * t * x1,
+                        u * u * y0 + 2 * u * t * cy + t * t * y1,
+                    )
+                )
     return pts
 
 
@@ -55,7 +60,7 @@ def stroke(draw: ImageDraw.ImageDraw, pts, width: float, color: str) -> None:
 
 def slice_by_length(pts, start: float, end: float):
     out, run = [], 0.0
-    for a, b in zip(pts, pts[1:]):
+    for a, b in zip(pts, pts[1:], strict=False):
         d = math.dist(a, b)
         if run + d >= start and run <= end:
             out.append(b)
