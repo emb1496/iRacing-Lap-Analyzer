@@ -17,7 +17,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.5"]
+desktop = ["pywebview>=5"]
+dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.5", "pyinstaller>=6"]
 
 [tool.setuptools.packages.find]
 include = ["lap_analyzer*"]

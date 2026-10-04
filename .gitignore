@@ -22,3 +22,8 @@ Thumbs.db
 
 # Local tooling
 .claude/
+
+# Build output
+build/
+*.spec
+.build-venv/
