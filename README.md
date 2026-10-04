@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/logo.svg" alt="Lap Analyzer logo" width="96"></p>
+
 # Lap Analyzer
 
 **Find out where you're losing time, corner by corner.** Upload iRacing telemetry (`.ibt`), pick two laps, and Lap Analyzer lines them up by distance and tells you, in plain English, what's different:
