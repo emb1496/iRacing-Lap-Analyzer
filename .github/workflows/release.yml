@@ -27,10 +27,10 @@ jobs:
       - working-directory: backend
         run: |
           pip install -e ".[desktop]" pyinstaller
-          pyinstaller --noconfirm --onefile --windowed --name LapAnalyzer `
+          pyinstaller --noconfirm --onefile --windowed --icon ../docs/logo.ico --name LapAnalyzer `
             --add-data "../frontend/dist;frontend_dist" `
             --collect-submodules uvicorn `
-            lap_analyzer/desktop.py
+            launch_desktop.py
       - uses: softprops/action-gh-release@v2
         with:
           files: backend/dist/LapAnalyzer.exe
