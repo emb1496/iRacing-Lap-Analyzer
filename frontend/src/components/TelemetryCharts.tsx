@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Area,
   CartesianGrid,
+  ComposedChart,
   Line,
   LineChart,
   ReferenceArea,
@@ -218,7 +220,21 @@ export function TelemetryCharts({ comparison: c, onHover, zoom, onZoom }: Props)
     />
   );
 
-  const hasPedals = !!(c.ref_trace.throttle && c.ref_trace.brake);
+  const area = (key: keyof Row, color: string, name: string) => (
+    <Area
+      dataKey={key}
+      name={name}
+      type="linear"
+      stroke={color}
+      fill={color}
+      fillOpacity={0.18}
+      dot={false}
+      strokeWidth={1.5}
+      isAnimationActive={false}
+    />
+  );
+
+  const hasPedals =!!(c.ref_trace.throttle && c.ref_trace.brake);
   const hasSteering = !!(c.ref_trace.steering && c.cmp_trace.steering);
   const hasGear = !!(c.ref_trace.gear && c.cmp_trace.gear);
   // Only the bottom-most chart shows the distance axis.
@@ -335,20 +351,37 @@ export function TelemetryCharts({ comparison: c, onHover, zoom, onZoom }: Props)
 
       {hasPedals && (
         <>
-          <h3>Throttle &amp; brake</h3>
-          <ResponsiveContainer width="100%" height={160}>
+          <h3>Throttle</h3>
+          <ResponsiveContainer width="100%" height={110}>
             <LineChart {...shared}>
               <CartesianGrid stroke="var(--grid)" vertical={false} />
-              {xAxis(axisOn === "pedals")}
-              <YAxis width={48} stroke="var(--muted)" domain={[0, 100]} />
+              {xAxis(false)}
+              <YAxis width={48} stroke="var(--muted)" domain={[0, 100]} ticks={[0, 50, 100]} />
               {corners}
               {tooltip("%")}
-              {line("refThrottle", REF, `${c.ref.label} throttle`)}
-              {line("cmpThrottle", CMP, `${c.cmp.label} throttle`)}
-              {line("refBrake", REF, `${c.ref.label} brake`, true)}
-              {line("cmpBrake", CMP, `${c.cmp.label} brake`, true)}
+              {line("refThrottle", REF, c.ref.label)}
+              {line("cmpThrottle", CMP, c.cmp.label)}
               {brush}
             </LineChart>
+          </ResponsiveContainer>
+
+          <h3>Brake</h3>
+          <ResponsiveContainer width="100%" height={110}>
+            <ComposedChart {...shared}>
+              <CartesianGrid stroke="var(--grid)" vertical={false} />
+              {xAxis(axisOn === "pedals")}
+              <YAxis
+                width={48}
+                stroke="var(--muted)"
+                domain={[0, (max: number) => Math.max(20, Math.ceil(max / 10) * 10)]}
+                allowDataOverflow
+              />
+              {corners}
+              {tooltip("%")}
+              {area("refBrake", REF, c.ref.label)}
+              {area("cmpBrake", CMP, c.cmp.label)}
+              {brush}
+            </ComposedChart>
           </ResponsiveContainer>
         </>
       )}
