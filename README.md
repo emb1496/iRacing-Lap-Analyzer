@@ -101,6 +101,20 @@ Lap times are checked against the simulator's ground truth to within 1 ms.
 cd backend && pytest --cov   # fails if backend coverage drops below 95%
 ```
 
+### Integration tests
+
+Separate from the unit tests above, these launch the real app and check it from the outside:
+
+```bash
+# API over real HTTP: starts uvicorn in a subprocess (frontend tests need `npm run build` first)
+cd backend && pytest tests_integration
+
+# Full stack in a browser: Playwright drives the built frontend served by FastAPI
+cd e2e && npm install && npx playwright install chromium && npx playwright test
+```
+
+The e2e run builds `frontend/dist` if it is missing and starts the server itself. Set `PYTHON` to pick the interpreter and `CHROMIUM_PATH` to use an existing Chromium.
+
 ## API
 
 | Method | Path | |
