@@ -179,6 +179,14 @@ def _frontend_dir() -> Path | None:
     return candidate if (candidate / "index.html").is_file() else None
 
 
+def _mount_frontend(application: FastAPI) -> bool:
+    """Serve the built frontend at ``/``. Returns False when there is no build to serve."""
+    dist = _frontend_dir()
+    if dist is None:
+        return False
+    application.mount("/", StaticFiles(directory=dist, html=True), name="frontend")
+    return True
+
+
 # Registered last so it never shadows the /api routes.
-if (_dist := _frontend_dir()) is not None:
-    app.mount("/", StaticFiles(directory=_dist, html=True), name="frontend")
+_mount_frontend(app)

@@ -72,7 +72,7 @@ def write_ibt(
 
     disk = np.zeros(1, DISK_HEADER)
     disk["record_count"] = n_records
-    if "SessionTime" in channels:
+    if "SessionTime" in channels and n_records:
         times = channels["SessionTime"][0]
         disk["start_time"] = times[0]
         disk["end_time"] = times[-1]

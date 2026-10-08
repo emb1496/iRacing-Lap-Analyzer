@@ -29,4 +29,7 @@ build/
 .build-venv/
 .build*
 backend/dist/
+coverage.xml
+.coverage
+htmlcov/
 coverage/
