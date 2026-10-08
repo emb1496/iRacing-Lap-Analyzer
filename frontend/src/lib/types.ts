@@ -22,6 +22,9 @@ export interface LapSelection {
   lap: number;
 }
 
+/** Which side of the comparison a lap pick applies to. */
+export type Role = "ref" | "cmp";
+
 export interface LapRef {
   session_id: string;
   lap: number;
