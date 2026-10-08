@@ -98,7 +98,7 @@ def test_insights_explain_where_and_why_time_was_lost(session):
 Lap times are checked against the simulator's ground truth to within 1 ms.
 
 ```bash
-cd backend && pytest
+cd backend && pytest --cov   # fails if backend coverage drops below 95%
 ```
 
 ## API

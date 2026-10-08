@@ -1,8 +1,10 @@
 import numpy as np
 import pytest
+from helpers import lap_channels, make_ibt
 
-from lap_analyzer.analysis import lap_conditions
-from lap_analyzer.analysis.conditions import tyre_channel_names
+from lap_analyzer.analysis import LapTrace, lap_conditions, resample_lap, split_laps
+from lap_analyzer.analysis.conditions import tyre_channel_names, tyre_summaries
+from lap_analyzer.ibt import IbtFile, write_ibt
 from lap_analyzer.session import Session
 
 
@@ -49,3 +51,54 @@ def test_tyre_channel_names_prefers_live_surface_and_swaps_sides():
 def test_tyre_channel_names_falls_back_to_carcass():
     ibt = dict.fromkeys(f"LFtempC{b}" for b in "LMR")
     assert tyre_channel_names(ibt)["LF_middle"] == "LFtempCM"
+
+
+# --- hand-built files: missing / partial channels --------------------------------------------
+GRID = np.linspace(0, 1, 11)
+
+
+def _lap_conditions(ibt):
+    lap = split_laps(ibt)[1]
+    return lap_conditions(ibt, lap, resample_lap(ibt, lap, GRID))
+
+
+def test_conditions_with_no_weather_or_tyre_channels():
+    c = _lap_conditions(make_ibt())
+    assert (c.track_temp, c.air_temp, c.wetness, c.wind_speed, c.humidity) == (None,) * 5
+    assert c.tyres == {}
+
+
+def test_conditions_fallback_channel_and_unknown_wetness():
+    ch = lap_channels(
+        TrackTemp=np.full(400, 30.0, np.float32),
+        TrackWetness=np.zeros(400, np.int32),
+        RelativeHumidity=np.full(400, 0.5, np.float32),
+    )
+    c = _lap_conditions(IbtFile.from_bytes(write_ibt(ch)))
+    assert c.track_temp == pytest.approx(30.0)
+    assert c.wetness is None  # 0 means unknown
+    assert c.humidity == pytest.approx(50.0)
+
+
+def test_tyre_summaries_skip_incomplete_corners_and_allow_missing_pressure():
+    ones = np.ones(5)
+    trace = LapTrace(
+        pct=np.linspace(0, 1, 5),
+        time=ones,
+        channels={
+            "LF_inner": ones, "LF_middle": ones * 2, "LF_outer": ones * 3,  # no pressure
+            "RF_inner": ones,  # incomplete: skipped
+        },
+    )  # fmt: skip
+    out = tyre_summaries(trace)
+    assert set(out) == {"LF"}
+    assert out["LF"].pressure is None and out["LF"].middle == 2.0
+
+
+def test_tyre_channel_names_prefers_surface_then_carcass_and_adds_pressure():
+    z = np.zeros(400, np.float32)
+    ch = lap_channels(LFtempCL=z, LFtempCM=z, LFtempCR=z, LFpressure=z, RFtempL=z, RFtempM=z)
+    names = tyre_channel_names(IbtFile.from_bytes(write_ibt(ch)))
+    assert names["LF_inner"] == "LFtempCR" and names["LF_outer"] == "LFtempCL"
+    assert names["LF_pressure"] == "LFpressure"
+    assert not any(k.startswith("RF") for k in names)  # RFtempR missing
