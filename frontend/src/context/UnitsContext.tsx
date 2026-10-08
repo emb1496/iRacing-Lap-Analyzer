@@ -1,5 +1,5 @@
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
-import type { Units } from "./format";
+import type { Units } from "../lib/units";
 
 const KEY = "lap-analyzer.units";
 

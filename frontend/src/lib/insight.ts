@@ -1,5 +1,6 @@
-import { formatDelta, formatShortDist, formatSpeed, type Units } from "./format";
+import { formatDelta } from "./format";
 import type { Corner, Reason } from "./types";
+import { formatShortDist, formatSpeed, type Units } from "./units";
 
 function describeReason(r: Reason, units: Units): string {
   const v = r.value ?? 0;
