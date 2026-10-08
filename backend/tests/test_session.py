@@ -1,8 +1,16 @@
 import numpy as np
 import pytest
-from helpers import lap_channels, make_ibt
 
+from lap_analyzer.ibt import IbtFile, write_ibt
 from lap_analyzer.session import Session, SessionStore, _parse_track_length
+from tests.helpers import lap_channels, make_ibt
+
+
+def test_session_metadata_from_yaml(session, demo):
+    assert session.track == "Synthetic Ring"
+    assert session.car == "Generic GT3"
+    assert session.track_length == pytest.approx(demo.track.length, abs=10)
+    assert session.best_lap.number == 2
 
 
 @pytest.mark.parametrize(
@@ -63,7 +71,6 @@ def test_estimate_requires_complete_lap():
 
 
 def test_estimate_requires_speed_channel():
-    from lap_analyzer.ibt import IbtFile, write_ibt
 
     ch = lap_channels()
     del ch["Speed"]
@@ -82,7 +89,6 @@ def test_best_lap_and_lookup():
 
 def test_best_lap_none_without_valid_laps():
     pit = np.ones(400, bool)
-    from lap_analyzer.ibt import IbtFile, write_ibt
 
     ibt = IbtFile.from_bytes(write_ibt(lap_channels(OnPitRoad=pit), session_info=YAML))
     assert Session(ibt, "a.ibt").best_lap is None

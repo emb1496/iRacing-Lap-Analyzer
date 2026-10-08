@@ -1,16 +1,15 @@
 import numpy as np
 import pytest
-from helpers import lap_channels, make_ibt
 
-from lap_analyzer.analysis import LapTrace, lap_conditions, resample_lap, split_laps
+from lap_analyzer.analysis import (
+    LapTrace,
+    lap_conditions,
+    resample_lap,
+    split_laps,
+)
 from lap_analyzer.analysis.conditions import tyre_channel_names, tyre_summaries
 from lap_analyzer.ibt import IbtFile, write_ibt
-from lap_analyzer.session import Session
-
-
-@pytest.fixture(scope="module")
-def session(demo_ibt) -> Session:
-    return Session(demo_ibt, "demo.ibt")
+from tests.helpers import lap_channels, make_ibt
 
 
 def _conditions(session, lap):
@@ -53,7 +52,6 @@ def test_tyre_channel_names_falls_back_to_carcass():
     assert tyre_channel_names(ibt)["LF_middle"] == "LFtempCM"
 
 
-# --- hand-built files: missing / partial channels --------------------------------------------
 GRID = np.linspace(0, 1, 11)
 
 

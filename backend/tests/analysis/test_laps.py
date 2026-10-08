@@ -1,9 +1,36 @@
 import numpy as np
 import pytest
-from helpers import lap_channels, make_ibt
 
-from lap_analyzer.analysis import resample_lap, split_laps
+from lap_analyzer.analysis import (
+    resample_lap,
+    split_laps,
+)
+from lap_analyzer.analysis.laps import _resample_gear
 from lap_analyzer.ibt import IbtFile, IbtFormatError, write_ibt
+from tests.helpers import lap_channels, make_ibt
+
+
+def test_only_complete_off_pit_laps_are_valid(session, demo):
+    valid = [lap.number for lap in session.laps if lap.valid]
+    assert valid == [1, 2, 3]  # partial out lap (0) and in lap (4) excluded
+    assert not session.lap(0).complete
+    assert not session.lap(4).complete
+
+
+def test_lap_times_match_ground_truth_to_the_millisecond(session, demo):
+    measured = [session.lap(n).time for n in (1, 2, 3)]
+    np.testing.assert_allclose(measured, demo.lap_times, atol=1e-3)
+
+
+def test_gear_ignores_neutral_during_shifts_and_never_blends_gears():
+
+    pct = np.linspace(0, 1, 11)
+    gear = np.array([0, 4, 4, 0, 5, 5, 0, 0, 3, 3, 3], dtype=np.int32)
+    out = _resample_gear(pct, gear, np.linspace(0, 1, 101))
+    assert set(np.unique(out)) == {3.0, 4.0, 5.0}  # no 0s, no interpolated 1s/2s
+    assert out[0] == 4  # leading neutral takes the first real gear
+    assert out[35] == 4 and out[50] == 5 and out[75] == 5  # held through the shift
+
 
 GRID = np.linspace(0, 1, 11)
 
