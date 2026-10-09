@@ -9,9 +9,19 @@ const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 
 // FastAPI mounts frontend/dist when it *starts*, and Playwright starts the webServer before
 // globalSetup runs, so the build has to exist before the config finishes loading.
-if (!existsSync(path.join(frontend, "dist", "index.html"))) {
-  execFileSync(npm, ["ci"], { cwd: frontend, stdio: "inherit" });
-  execFileSync(npm, ["exec", "--", "vite", "build"], { cwd: frontend, stdio: "inherit" });
+// E2E_COVERAGE=1 always rebuilds, instrumented, so a stale plain build is never measured.
+const coverage = process.env.E2E_COVERAGE === "1";
+// (Playwright loads this config in the runner and again in each worker; build only once.)
+if (!process.env.E2E_BUILT && (coverage || !existsSync(path.join(frontend, "dist", "index.html")))) {
+  process.env.E2E_BUILT = "1";
+  if (!existsSync(path.join(frontend, "node_modules"))) {
+    execFileSync(npm, ["ci"], { cwd: frontend, stdio: "inherit" });
+  }
+  execFileSync(npm, ["exec", "--", "vite", "build"], {
+    cwd: frontend,
+    stdio: "inherit",
+    env: { ...process.env, VITE_COVERAGE: coverage ? "1" : "0" },
+  });
 }
 
 const PORT = 8765;

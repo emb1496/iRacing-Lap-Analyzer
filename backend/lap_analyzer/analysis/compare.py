@@ -147,6 +147,8 @@ def compare_traces(ref: LapTrace, cmp: LapTrace, track_length: float) -> Compari
     cmp_speed = cmp.channels["Speed"] * MS_TO_KMH
 
     apexes = detect_corners(distance, ref_speed)
+    if not apexes:  # a flat-out lap (e.g. an oval) has nothing to split into corners
+        return Comparison(distance=distance, delta=delta, ref=ref, cmp=cmp, corners=[])
     # Split the lap where the *slower* of the two laps peaks between apexes. That is
     # where the first of the two drivers starts braking, so a lap that brakes early
     # has all of the resulting loss charged to the corner it was braking for.

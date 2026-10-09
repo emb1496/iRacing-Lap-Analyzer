@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { makeShared } from "../../../test/chartShared";
-import { DeltaChart } from "../DeltaChart";
+import { DeltaChart, deltaSeconds } from "../DeltaChart";
 
 jest.mock("recharts", () => ({
   ...jest.requireActual("recharts"),
@@ -19,4 +19,9 @@ it("renders with and without its distance axis", () => {
 it("labels visible corners", () => {
   const { container } = render(<DeltaChart shared={makeShared()} showAxis={false} />);
   expect(container.querySelectorAll(".recharts-reference-line").length).toBeGreaterThanOrEqual(3);
+});
+
+it("formats the tooltip delta in seconds", () => {
+  expect(deltaSeconds(0.123)).toBe("+0.123 s");
+  expect(deltaSeconds(-0.5)).toBe("−0.500 s");
 });
