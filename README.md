@@ -98,7 +98,7 @@ def test_insights_explain_where_and_why_time_was_lost(session):
 Lap times are checked against the simulator's ground truth to within 1 ms.
 
 ```bash
-cd backend && pytest --cov   # fails if backend coverage drops below 95%
+cd backend && pytest --cov   # fails if backend coverage drops below 100%
 ```
 
 ### Integration tests
@@ -114,6 +114,24 @@ cd e2e && npm install && npx playwright install chromium && npx playwright test
 ```
 
 The e2e run builds `frontend/dist` if it is missing and starts the server itself. Set `PYTHON` to pick the interpreter and `CHROMIUM_PATH` to use an existing Chromium.
+
+### Coverage across all layers
+
+```bash
+scripts/coverage.sh
+```
+
+The app runs in its own process for the integration and e2e tests, so those layers are measured from inside that process:
+
+| Layer | How it is measured | Gate |
+| --- | --- | --- |
+| Backend unit | `pytest --cov` | merged with the next two |
+| Backend integration | the test server is launched as `python -m coverage run -m uvicorn` (`LAP_SERVER_COVERAGE=1`) | merged |
+| Backend e2e | Playwright starts the same wrapped server (`E2E_COVERAGE=1`) | merged |
+| Frontend unit | `jest --coverage` | 100% |
+| Frontend e2e | `frontend/dist` is built with Istanbul instrumentation (`VITE_COVERAGE=1`); each test dumps `window.__coverage__` | reported only |
+
+Backend data files from all three layers are combined and must reach 100%. Frontend e2e is reported separately because Jest and Vite instrument the code differently, so their Istanbul data cannot be merged reliably. HTML reports land in `backend/htmlcov`, `frontend/coverage/lcov-report` and `frontend/coverage-e2e`.
 
 ## API
 

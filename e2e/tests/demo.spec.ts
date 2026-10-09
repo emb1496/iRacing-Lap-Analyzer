@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 // Fail any test that logs a console error or throws in the page (the browser's automatic
 // /favicon.ico request 404s because the app ships no favicon, so that one is ignored).

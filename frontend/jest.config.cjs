@@ -12,8 +12,8 @@ module.exports = {
     "!src/**/types.ts",
     "!src/**/*.d.ts",
   ],
-  coverageReporters: ["text-summary", "text", "lcov"],
+  coverageReporters: ["text-summary", "text", "lcov", "json"],
   coverageThreshold: {
-    global: { statements: 95, branches: 95, functions: 95, lines: 95 },
+    global: { statements: 100, branches: 100, functions: 100, lines: 100 },
   },
 };

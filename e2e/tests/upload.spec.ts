@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { SAMPLE_IBT } from "../global-setup";
 
 test("uploading an .ibt file loads the session", async ({ page }) => {

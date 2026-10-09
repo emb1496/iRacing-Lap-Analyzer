@@ -30,10 +30,12 @@ markers = ["integration: launches the real server; run with `pytest tests_integr
 [tool.coverage.run]
 source = ["lap_analyzer"]
 branch = true
+parallel = true  # server subprocesses write their own data files; `coverage combine` merges them
+sigterm = true  # flush data when a server subprocess is terminated
 
 [tool.coverage.report]
-# Aim for 100%; the build fails below 95%.
-fail_under = 95
+# The build fails below 100%.
+fail_under = 100
 show_missing = true
 skip_covered = false
 exclude_also = [
