@@ -25,6 +25,7 @@ include = ["lap_analyzer*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["integration: launches the real server; run with `pytest tests_integration`"]
 
 [tool.coverage.run]
 source = ["lap_analyzer"]
