@@ -1,4 +1,18 @@
 import { defineConfig } from "@playwright/test";
+import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const frontend = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "frontend");
+const npm = process.platform === "win32" ? "npm.cmd" : "npm";
+
+// FastAPI mounts frontend/dist when it *starts*, and Playwright starts the webServer before
+// globalSetup runs, so the build has to exist before the config finishes loading.
+if (!existsSync(path.join(frontend, "dist", "index.html"))) {
+  execFileSync(npm, ["ci"], { cwd: frontend, stdio: "inherit" });
+  execFileSync(npm, ["exec", "--", "vite", "build"], { cwd: frontend, stdio: "inherit" });
+}
 
 const PORT = 8765;
 const python = process.env.PYTHON ?? "python";
