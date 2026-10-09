@@ -70,8 +70,8 @@ jobs:
           pip install -e ".[dev]"
           pytest tests_integration -q
 
-  # Re-runs every layer under coverage: backend unit + integration + e2e must merge to 100%,
-  # frontend unit must be 100%, and the browser (e2e) coverage is reported. See scripts/coverage.sh.
+  # Four separate coverage reports: backend unit (100%), backend integration, frontend unit (100%)
+  # and frontend e2e (the last two with regression floors). See scripts/coverage.sh.
   coverage:
     runs-on: ubuntu-latest
     steps:

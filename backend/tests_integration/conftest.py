@@ -2,39 +2,15 @@
 
 from __future__ import annotations
 
-import os
-import socket
 import subprocess
-import sys
 import time
 from collections.abc import Iterator
-from pathlib import Path
 
 import httpx
 import pytest
 
 from lap_analyzer.synthetic import SyntheticSession, demo_session
-
-BACKEND_DIR = Path(__file__).resolve().parents[1]
-
-
-def server_python() -> list[str]:
-    """The interpreter command; wrapped in ``coverage run`` when LAP_SERVER_COVERAGE=1."""
-    if os.environ.get("LAP_SERVER_COVERAGE") == "1":
-        return [sys.executable, "-m", "coverage", "run"]
-    return [sys.executable]
-
-
-def server_env() -> dict[str, str]:
-    env = dict(os.environ)
-    env.setdefault("COVERAGE_FILE", str(BACKEND_DIR / ".coverage.integration"))
-    return env
-
-
-def free_port() -> int:
-    with socket.socket() as s:
-        s.bind(("127.0.0.1", 0))
-        return s.getsockname()[1]
+from tests_integration.launch import BACKEND_DIR, environment, free_port, python_command
 
 
 @pytest.fixture(scope="session")
@@ -44,12 +20,12 @@ def server() -> Iterator[str]:
     base = f"http://127.0.0.1:{port}"
     proc = subprocess.Popen(
         [
-            *server_python(),
+            *python_command(),
             "-m", "uvicorn", "lap_analyzer.main:app",
             "--host", "127.0.0.1", "--port", str(port), "--log-level", "warning",
         ],
         cwd=BACKEND_DIR,
-        env=server_env(),
+        env=environment(),
     )  # fmt: skip
     try:
         deadline = time.monotonic() + 30

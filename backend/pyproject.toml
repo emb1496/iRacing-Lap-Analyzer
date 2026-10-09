@@ -33,6 +33,10 @@ branch = true
 parallel = true  # server subprocesses write their own data files; `coverage combine` merges them
 sigterm = true  # flush data when a server subprocess is terminated
 
+[tool.coverage.paths]
+# Servers started from a copy of the package (to test a missing frontend build) report there.
+source = ["lap_analyzer", "*/lap_analyzer"]
+
 [tool.coverage.report]
 # The build fails below 100%.
 fail_under = 100

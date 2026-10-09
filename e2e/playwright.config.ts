@@ -26,9 +26,6 @@ if (!process.env.E2E_BUILT && (coverage || !existsSync(path.join(frontend, "dist
 
 const PORT = 8765;
 const python = process.env.PYTHON ?? "python";
-// Under coverage the server runs as `python -m coverage run -m uvicorn ...`; pyproject.toml makes
-// it flush its data on SIGTERM, and scripts/coverage.sh combines the per-process files.
-const serverPython = coverage ? `${python} -m coverage run` : python;
 
 export default defineConfig({
   testDir: "./tests",
@@ -46,13 +43,10 @@ export default defineConfig({
   },
   // Launches the real app: FastAPI serving the built frontend from frontend/dist.
   webServer: {
-    command: `${serverPython} -m uvicorn lap_analyzer.main:app --host 127.0.0.1 --port ${PORT} --log-level warning`,
+    command: `${python} -m uvicorn lap_analyzer.main:app --host 127.0.0.1 --port ${PORT} --log-level warning`,
     cwd: "../backend",
     url: `http://127.0.0.1:${PORT}/api/health`,
-    reuseExistingServer: !process.env.CI && !coverage, // a reused server would not be measured
-    env: coverage ? { COVERAGE_FILE: path.resolve("..", "backend", ".coverage.e2e") } : {},
+    reuseExistingServer: !process.env.CI,
     timeout: 30_000,
-    // SIGTERM lets `coverage run` write its data file; Playwright's default is SIGKILL.
-    gracefulShutdown: { signal: "SIGTERM", timeout: 10_000 },
   },
 });
