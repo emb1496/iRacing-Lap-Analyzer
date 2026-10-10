@@ -31,7 +31,23 @@ jobs:
             --add-data "../frontend/dist;frontend_dist" `
             --collect-submodules uvicorn `
             launch_desktop.py
+      - name: Upload unsigned exe
+        id: upload-unsigned
+        uses: actions/upload-artifact@v4
+        with:
+          name: LapAnalyzer-unsigned
+          path: backend/dist/LapAnalyzer.exe
+      - name: Sign exe with SignPath
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: iracing-lap-analyzer
+          signing-policy-slug: release-signing
+          github-artifact-id: ${{ steps.upload-unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signed
       - uses: softprops/action-gh-release@v2
         with:
-          files: backend/dist/LapAnalyzer.exe
+          files: signed/LapAnalyzer.exe
           generate_release_notes: true
