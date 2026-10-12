@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 from dataclasses import asdict
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
@@ -15,10 +16,11 @@ from lap_analyzer.models.comparison_out import ComparisonOut
 from lap_analyzer.models.conditions_out import ConditionsOut
 from lap_analyzer.models.lap_ref import LapRef
 from lap_analyzer.models.lap_summary import LapSummary
+from lap_analyzer.models.library_out import LibraryFile, LibraryLoad, LibraryOut
 from lap_analyzer.models.session_summary import SessionSummary
 from lap_analyzer.models.trace import Trace
 
-from . import __version__
+from . import __version__, library
 from .analysis import LapTrace, compare_traces, lap_conditions
 from .analysis.conditions import TYRE_CORNERS, TYRE_POSITIONS
 from .ibt import IbtFile, IbtFormatError
@@ -45,6 +47,8 @@ def _summary(s: Session) -> SessionSummary:
         track=s.track,
         car=s.car,
         driver=s.driver,
+        recorded_at=s.recorded_at,
+        session_type=s.session_type,
         track_length=round(s.track_length, 1),
         best_lap=best.number if best else None,
         laps=[
@@ -55,9 +59,9 @@ def _summary(s: Session) -> SessionSummary:
     )
 
 
-def _load(data: bytes, filename: str) -> SessionSummary:
+def _load(data: bytes, filename: str, recorded_at: datetime | None = None) -> SessionSummary:
     try:
-        session = Session(IbtFile.from_bytes(data), filename)
+        session = Session(IbtFile.from_bytes(data), filename, recorded_at)
     except (IbtFormatError, ValueError) as exc:
         raise HTTPException(422, f"Could not read {filename}: {exc}") from exc
     return _summary(store.add(session))
@@ -120,6 +124,30 @@ def load_demo() -> SessionSummary:
     return _load(demo_session().ibt, "demo-synthetic-ring.ibt")
 
 
+@app.get("/api/files", response_model=LibraryOut)
+def list_files() -> LibraryOut:
+    directory = library.telemetry_dir()
+    if directory is None:
+        return LibraryOut(directory=None, files=[])
+    files = [LibraryFile(**asdict(e)) for e in library.scan(directory)]
+    return LibraryOut(directory=str(directory), files=files)
+
+
+@app.post("/api/sessions/from-library", response_model=SessionSummary)
+def load_from_library(body: LibraryLoad) -> SessionSummary:
+    directory = library.telemetry_dir()
+    if directory is None:
+        raise HTTPException(404, "telemetry folder not found")
+    try:
+        path = library.resolve(directory, body.name)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from None
+    except FileNotFoundError:
+        raise HTTPException(404, f"{body.name} not found in the telemetry folder") from None
+    mtime = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
+    return _load(path.read_bytes(), path.name, mtime)
+
+
 @app.get("/api/sessions", response_model=list[SessionSummary])
 def list_sessions() -> list[SessionSummary]:
     return [_summary(s) for s in store.all()]
@@ -136,6 +164,8 @@ def compare(
     ref_s, cmp_s = _get_session(ref_session), _get_session(cmp_session)
     if ref_s.track != cmp_s.track:
         raise HTTPException(400, f"laps are from different tracks ({ref_s.track} / {cmp_s.track})")
+    if ref_s.car != cmp_s.car:
+        raise HTTPException(400, f"laps are from different cars ({ref_s.car} / {cmp_s.car})")
 
     grid = np.linspace(0.0, 1.0, max(100, int(ref_s.track_length / step)) + 1)
     try:

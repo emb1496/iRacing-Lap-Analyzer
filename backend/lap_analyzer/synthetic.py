@@ -29,6 +29,7 @@ EARTH_M_PER_DEG = 111_320.0
 TYRE_COLD_C = 50.0
 TYRE_COLD_KPA = 150.0
 TYRE_TAU_S = 5.0  # surface temperature time constant
+DEMO_START_DATE = 1_767_000_000  # 2025-12-29 09:20 UTC, so the demo has a recording date
 
 # Corners of a fictional ~4 km circuit (metres). Corner cutting turns this into a smooth track.
 LAYOUT = [
@@ -165,19 +166,20 @@ def _tyre_temps(
     return channels
 
 
-def _session_yaml(track: Track) -> str:
+def _session_yaml(track: Track, *, track_name: str, car: str, event_type: str) -> str:
     return (
         "WeekendInfo:\n"
-        " TrackName: synthetic_ring\n"
-        " TrackDisplayName: Synthetic Ring\n"
+        f" TrackName: {track_name.lower().replace(' ', '_')}\n"
+        f" TrackDisplayName: {track_name}\n"
         " TrackConfigName: Grand Prix\n"
         f" TrackLength: {track.length / 1000:.2f} km\n"
+        f" EventType: {event_type}\n"
         "DriverInfo:\n"
         " DriverCarIdx: 0\n"
         " Drivers:\n"
         " - CarIdx: 0\n"
         "   UserName: Demo Driver\n"
-        "   CarScreenName: Generic GT3\n"
+        f"   CarScreenName: {car}\n"
     )
 
 
@@ -189,6 +191,10 @@ def generate_session(
     out_lap_from: float = 0.7,
     in_lap_to: float = 0.3,
     session_start: float = 120.0,
+    track_name: str = "Synthetic Ring",
+    car: str = "Generic GT3",
+    event_type: str = "Practice",
+    start_date: int = DEMO_START_DATE,
 ) -> SyntheticSession:
     """A session with a partial out lap (lap 0), one full lap per profile, and a partial in lap."""
     track = track or make_track()
@@ -260,7 +266,8 @@ def generate_session(
         "RelativeHumidity": ((0.55 + 0.03 * lap_no).astype(f4), "%", "Relative Humidity"),
         **tyres,
     }
-    data = write_ibt(channels, tick_rate=tick_rate, session_info=_session_yaml(track))
+    yaml_text = _session_yaml(track, track_name=track_name, car=car, event_type=event_type)
+    data = write_ibt(channels, tick_rate=tick_rate, session_info=yaml_text, start_date=start_date)
     return SyntheticSession(ibt=data, track=track, lap_times=lap_times)
 
 

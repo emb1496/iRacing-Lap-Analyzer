@@ -19,6 +19,7 @@ def write_ibt(
     *,
     tick_rate: int = 60,
     session_info: str = "",
+    start_date: int = 0,
 ) -> bytes:
     if not channels:
         raise ValueError("at least one channel is required")
@@ -72,6 +73,7 @@ def write_ibt(
 
     disk = np.zeros(1, DISK_HEADER)
     disk["record_count"] = n_records
+    disk["start_date"] = start_date
     if "SessionTime" in channels and n_records:
         times = channels["SessionTime"][0]
         disk["start_time"] = times[0]

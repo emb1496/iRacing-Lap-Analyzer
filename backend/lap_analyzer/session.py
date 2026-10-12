@@ -5,12 +5,14 @@ from __future__ import annotations
 import re
 import threading
 import uuid
+from datetime import datetime
 from typing import Any
 
 import numpy as np
 
 from .analysis import LapInfo, LapTrace, resample_lap, split_laps
 from .ibt import IbtFile
+from .metadata import describe
 
 
 def _parse_track_length(info: dict[str, Any]) -> float | None:
@@ -23,20 +25,18 @@ def _parse_track_length(info: dict[str, Any]) -> float | None:
 
 
 class Session:
-    def __init__(self, ibt: IbtFile, filename: str) -> None:
+    def __init__(self, ibt: IbtFile, filename: str, recorded_at: datetime | None = None) -> None:
         self.id = uuid.uuid4().hex[:12]
         self.filename = filename
         self.ibt = ibt
         self.laps = split_laps(ibt)
 
         info = ibt.session_info
-        weekend = info.get("WeekendInfo", {})
-        self.track = weekend.get("TrackDisplayName") or weekend.get("TrackName") or "Unknown track"
-        drivers = info.get("DriverInfo", {})
-        my_idx = drivers.get("DriverCarIdx")
-        me = next((d for d in drivers.get("Drivers", []) if d.get("CarIdx") == my_idx), {})
-        self.car = me.get("CarScreenName", "Unknown car")
-        self.driver = me.get("UserName", "Unknown driver")
+        meta = describe(info)
+        self.track, self.car, self.driver = meta.track, meta.car, meta.driver
+        self.session_type = meta.session_type
+        # The header date wins; callers pass e.g. the file's mtime for files that lack one.
+        self.recorded_at = ibt.recorded_at or recorded_at
         self.track_length = _parse_track_length(info) or self._estimate_track_length()
 
     def _estimate_track_length(self) -> float:
