@@ -155,6 +155,17 @@ Interactive docs are at http://localhost:8000/docs while the backend is running.
 - [ ] Live mode: read iRacing's shared-memory telemetry while driving and show a real-time delta
 - [ ] Docker Compose and a hosted demo
 
+## Code signing policy
+
+Free code signing for the Windows `.exe` is provided by [SignPath.io](https://signpath.io), with a certificate from the [SignPath Foundation](https://signpath.org).
+
+- Signed binaries are built from this repository by the GitHub Actions workflow in `.github/workflows/release.yml`, then submitted to SignPath. Only tagged releases are signed.
+- Approver and maintainer: [@emb1496](https://github.com/emb1496).
+
+## Privacy
+
+Lap Analyzer runs entirely on your computer. Your telemetry files are processed locally and are never uploaded, and the app does not collect or transmit any personal data.
+
 ## License
 
 MIT
