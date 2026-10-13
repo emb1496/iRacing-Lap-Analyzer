@@ -2,29 +2,49 @@ import { useState } from "react";
 import { ConditionsPanel } from "./components/conditions/ConditionsPanel";
 import { CornerTable } from "./components/corners/CornerTable";
 import { TelemetryCharts } from "./components/charts/TelemetryCharts";
-import { EmptyState } from "./components/layout/EmptyState";
 import { ErrorBanner } from "./components/layout/ErrorBanner";
 import { SummaryStats } from "./components/layout/SummaryStats";
 import { Topbar } from "./components/layout/Topbar";
+import { FilePicker } from "./components/sessions/FilePicker";
 import { SessionPanel } from "./components/sessions/SessionPanel";
 import { TrackMap } from "./components/trackmap/TrackMap";
 import { useComparison } from "./hooks/useComparison";
+import { useLibrary } from "./hooks/useLibrary";
 import { useSessions } from "./hooks/useSessions";
 import { useThrottledHover } from "./hooks/useThrottledHover";
 import { api } from "./lib/api";
 import { cornerRange, type Range } from "./lib/range";
 
 export default function App() {
-  const { sessions, selection, busy, error, setError, addSession, pick } = useSessions();
+  const {
+    sessions,
+    selection,
+    sameFile,
+    busy,
+    error,
+    setError,
+    addSession,
+    chooseFile,
+    setSameFile,
+    pick,
+  } = useSessions();
+  const { library, loading: libraryLoading, refresh: rescan } = useLibrary();
+  const [picking, setPicking] = useState(false);
   const { hoverIndex, setHoverIndex, clearHover } = useThrottledHover();
   const [zoom, setZoom] = useState<Range | null>(null);
   const comparison = useComparison(selection, {
     onLoaded: () => {
+      setPicking(false);
       clearHover();
       setZoom(null);
     },
     onError: setError,
   });
+
+  const sessionOf = (role: "ref" | "cmp") =>
+    sessions.find((s) => s.id === selection[role]?.sessionId) ?? null;
+  const refSession = sessionOf("ref");
+  const chosen = { ref: refSession?.filename ?? null, cmp: sessionOf("cmp")?.filename ?? null };
 
   return (
     <div className="app">
@@ -37,13 +57,27 @@ export default function App() {
         onPick={pick}
         onUpload={(file) => addSession(() => api.upload(file))}
         onDemo={() => addSession(api.loadDemo)}
+        onChangeFiles={() => setPicking(true)}
       />
 
       <main>
         {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
 
-        {!comparison ? (
-          <EmptyState busy={busy} onDemo={() => addSession(api.loadDemo)} />
+        {!comparison || picking ? (
+          <FilePicker
+            library={library}
+            loading={libraryLoading}
+            busy={busy}
+            chosen={chosen}
+            reference={refSession}
+            sameFile={sameFile}
+            onSameFile={setSameFile}
+            onChoose={(role, file) =>
+              chooseFile(role, file.name, () => api.loadFromLibrary(file.name))
+            }
+            onRescan={rescan}
+            onDemo={() => addSession(api.loadDemo)}
+          />
         ) : (
           <>
             <SummaryStats comparison={comparison} />

@@ -46,8 +46,10 @@ LAP_SERVER_COVERAGE=1 COVERAGE_FILE=.coverage.integration "$python" -m pytest te
 # Each server process wrote its own data file; fold them into one and report.
 COVERAGE_FILE=.coverage.integration "$python" -m coverage combine -q
 COVERAGE_FILE=.coverage.integration "$python" -m coverage html -q --directory=htmlcov/integration \
-  --fail-under="$BACKEND_INTEGRATION_FLOOR"
-COVERAGE_FILE=.coverage.integration "$python" -m coverage report --skip-covered \
+  --fail-under=97
+# The floor is enforced by the report below (pyproject.toml's fail_under = 100 is for unit tests).
+# Last, so the missing-lines table is printed before the floor can fail the run.
+COVERAGE_FILE=.coverage.integration "$python" -m coverage report --skip-covered --show-missing \
   --fail-under="$BACKEND_INTEGRATION_FLOOR"
 
 # ---- 3. frontend unit ----------------------------------------------------------------------

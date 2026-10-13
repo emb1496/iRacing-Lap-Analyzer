@@ -22,7 +22,7 @@ test("uploading a non-ibt file shows a dismissible error", async ({ page }) => {
   await expect(alert).toContainText("Could not read notes.ibt");
   await alert.getByRole("button", { name: "Dismiss" }).click();
   await expect(alert).toBeHidden();
-  await expect(page.getByRole("heading", { name: "Where are you losing time?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Pick your laps" })).toBeVisible();
 });
 
 test("loading two sessions compares across files", async ({ page }) => {

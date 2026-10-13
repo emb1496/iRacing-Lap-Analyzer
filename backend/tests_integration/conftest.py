@@ -5,17 +5,18 @@ from __future__ import annotations
 import subprocess
 import time
 from collections.abc import Iterator
+from contextlib import contextmanager
 
-import httpx
+import httpx2
 import pytest
 
 from lap_analyzer.synthetic import SyntheticSession, demo_session
 from tests_integration.launch import BACKEND_DIR, environment, free_port, python_command
 
 
-@pytest.fixture(scope="session")
-def server() -> Iterator[str]:
-    """Base URL of a freshly launched ``uvicorn lap_analyzer.main:app``."""
+@contextmanager
+def launched_server(**env: str) -> Iterator[str]:
+    """Base URL of a freshly launched ``uvicorn lap_analyzer.main:app`` with extra environment."""
     port = free_port()
     base = f"http://127.0.0.1:{port}"
     proc = subprocess.Popen(
@@ -25,7 +26,7 @@ def server() -> Iterator[str]:
             "--host", "127.0.0.1", "--port", str(port), "--log-level", "warning",
         ],
         cwd=BACKEND_DIR,
-        env=environment(),
+        env=environment(**env),
     )  # fmt: skip
     try:
         deadline = time.monotonic() + 30
@@ -33,9 +34,9 @@ def server() -> Iterator[str]:
             if proc.poll() is not None:
                 pytest.fail(f"server exited early with code {proc.returncode}")
             try:
-                httpx.get(f"{base}/api/health", timeout=1).raise_for_status()
+                httpx2.get(f"{base}/api/health", timeout=1).raise_for_status()
                 break
-            except httpx.HTTPError:
+            except httpx2.HTTPError:
                 if time.monotonic() > deadline:
                     pytest.fail("server did not become healthy within 30s")
                 time.sleep(0.1)
@@ -49,8 +50,14 @@ def server() -> Iterator[str]:
 
 
 @pytest.fixture(scope="session")
-def client(server: str) -> Iterator[httpx.Client]:
-    with httpx.Client(base_url=server, timeout=30) as c:
+def server() -> Iterator[str]:
+    with launched_server() as base:
+        yield base
+
+
+@pytest.fixture(scope="session")
+def client(server: str) -> Iterator[httpx2.Client]:
+    with httpx2.Client(base_url=server, timeout=30) as c:
         yield c
 
 

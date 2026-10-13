@@ -18,3 +18,19 @@ it("labels and fires", () => {
   expect(screen.getByLabelText("Use lap 3 as reference")).toHaveClass("on");
   expect(screen.getByLabelText("Use lap 3 as comparison")).not.toHaveClass("on");
 });
+
+it("is disabled with a reason when blocked", () => {
+  const onPick = jest.fn();
+  render(
+    <table>
+      <tbody>
+        <tr>
+          <RolePick role="cmp" lap={1} selected={false} blockedReason="Different car" onPick={onPick} />
+        </tr>
+      </tbody>
+    </table>,
+  );
+  const button = screen.getByLabelText("Use lap 1 as comparison");
+  expect(button).toBeDisabled();
+  expect(button).toHaveAttribute("title", "Different car");
+});

@@ -8,6 +8,7 @@ session (100k+ records, ~250 channels) loads in milliseconds.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from functools import cached_property
 from pathlib import Path
 from typing import Any
@@ -35,6 +36,75 @@ def _cstr(raw: bytes) -> str:
     return raw.split(b"\0", 1)[0].decode("latin-1")
 
 
+_YAML_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+
+
+def parse_session_info(raw: str) -> dict[str, Any]:
+    """Session YAML (track, car, drivers, ...). Empty if it fails to parse.
+
+    iRacing's YAML is not always strictly valid (unquoted user-entered
+    strings), so a parse failure must not make the telemetry unusable.
+    """
+    try:
+        parsed = yaml.load(raw, Loader=_YAML_LOADER)  # CSafeLoader is the safe loader
+    except yaml.YAMLError:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def recorded_at(start_date: int, start_time: float) -> datetime | None:
+    """When logging started, from the disk header: session start (time_t) + offset into it.
+
+    None when the header carries no date (iRacing writes 0 for some files).
+    """
+    if start_date <= 0:
+        return None
+    try:
+        return datetime.fromtimestamp(start_date + max(0.0, start_time), tz=timezone.utc)
+    except (OverflowError, OSError, ValueError):
+        return None
+
+
+@dataclass(frozen=True)
+class IbtMeta:
+    """Everything needed to describe a file, read without touching the sample table."""
+
+    start_date: int
+    start_time: float
+    lap_count: int
+    session_info_raw: str
+
+    @cached_property
+    def session_info(self) -> dict[str, Any]:
+        return parse_session_info(self.session_info_raw)
+
+    @property
+    def recorded_at(self) -> datetime | None:
+        return recorded_at(self.start_date, self.start_time)
+
+
+def read_meta(path: str | Path) -> IbtMeta:
+    """Read only the headers and session YAML of an .ibt file (a few KB to ~100 KB)."""
+    head_len = HEADER.itemsize + DISK_HEADER.itemsize
+    with open(path, "rb") as f:
+        head = f.read(head_len)
+        if len(head) < head_len:
+            raise IbtFormatError(f"file is {len(head)} bytes; an .ibt header alone is {head_len}")
+        hdr = np.frombuffer(head, HEADER, count=1)[0]
+        disk = np.frombuffer(head, DISK_HEADER, count=1, offset=HEADER.itemsize)[0]
+        info_off, info_len = int(hdr["session_info_offset"]), int(hdr["session_info_len"])
+        if info_off < head_len or not 0 < info_len <= 4 * 1024 * 1024:
+            raise IbtFormatError("header has no readable session info")
+        f.seek(info_off)
+        raw = f.read(info_len)
+    return IbtMeta(
+        start_date=int(disk["start_date"]),
+        start_time=float(disk["start_time"]),
+        lap_count=int(disk["lap_count"]),
+        session_info_raw=raw.split(b"\0", 1)[0].decode("latin-1"),
+    )
+
+
 class IbtFile:
     def __init__(
         self,
@@ -43,7 +113,11 @@ class IbtFile:
         channels: dict[str, Channel],
         records: np.ndarray,
         session_info_raw: str,
+        start_date: int = 0,
+        start_time: float = 0.0,
     ) -> None:
+        self.start_date = start_date
+        self.start_time = start_time
         self.tick_rate = tick_rate
         self.channels = channels
         self.records = records
@@ -115,20 +189,18 @@ class IbtFile:
             channels=channels,
             records=records,
             session_info_raw=session_info_raw,
+            start_date=int(disk["start_date"]),
+            start_time=float(disk["start_time"]),
         )
 
     @cached_property
     def session_info(self) -> dict[str, Any]:
-        """Session YAML (track, car, drivers, ...). Empty if it fails to parse.
+        """Parsed session YAML (track, car, drivers, ...). Empty if it fails to parse."""
+        return parse_session_info(self.session_info_raw)
 
-        iRacing's YAML is not always strictly valid (unquoted user-entered
-        strings), so a parse failure must not make the telemetry unusable.
-        """
-        try:
-            parsed = yaml.safe_load(self.session_info_raw)
-        except yaml.YAMLError:
-            return {}
-        return parsed if isinstance(parsed, dict) else {}
+    @property
+    def recorded_at(self) -> datetime | None:
+        return recorded_at(self.start_date, self.start_time)
 
     def __len__(self) -> int:
         return len(self.records)

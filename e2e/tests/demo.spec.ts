@@ -18,7 +18,7 @@ test.afterEach(() => {
 });
 
 test("demo session loads and shows a lap comparison", async ({ page }) => {
-  await expect(page.getByRole("heading", { name: "Where are you losing time?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Pick your laps" })).toBeVisible();
   await page.getByRole("button", { name: "Try the demo session" }).click();
 
   // Default selection: best lap (2) vs most recent other lap (3).

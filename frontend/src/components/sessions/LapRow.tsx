@@ -8,6 +8,7 @@ interface Props {
   /** Best lap time in the session, for the gap column. */
   best: number | null;
   selection: Record<Role, LapSelection | null>;
+  blocked?: Partial<Record<Role, string>>;
   onPick: (role: Role, selection: LapSelection) => void;
 }
 
@@ -15,7 +16,7 @@ function isSelected(sel: LapSelection | null, sessionId: string, lap: number) {
   return sel?.sessionId === sessionId && sel.lap === lap;
 }
 
-export function LapRow({ session: s, lap, best, selection, onPick }: Props) {
+export function LapRow({ session: s, lap, best, selection, blocked, onPick }: Props) {
   return (
     <tr className={lap.valid ? "" : "invalid"}>
       <td>
@@ -35,6 +36,7 @@ export function LapRow({ session: s, lap, best, selection, onPick }: Props) {
           role={role}
           lap={lap.number}
           selected={isSelected(selection[role], s.id, lap.number)}
+          blockedReason={blocked?.[role]}
           onPick={() => onPick(role, { sessionId: s.id, lap: lap.number })}
         />
       ))}

@@ -33,6 +33,7 @@ coverage.xml
 .coverage
 htmlcov/
 coverage/
+*.lcov
 coverage-e2e/
 
 # E2E
