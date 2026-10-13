@@ -32,9 +32,10 @@ export function TyreCard({ corner, refTyre, cmpTyre, scale }: Props) {
   );
   const avg = (t: TyreSummary) => (t.inner + t.middle + t.outer) / 3;
   const dTemp = avg(cmpTyre) - avg(refTyre);
+  // Pressure is only compared when both laps logged it.
   const pressures =
     refTyre.pressure != null && cmpTyre.pressure != null
-      ? ([refTyre.pressure, cmpTyre.pressure] as const)
+      ? { ref: refTyre.pressure, cmp: cmpTyre.pressure }
       : null;
   const press = (p: number) => convertPressure(p, units).toFixed(units === "imperial" ? 1 : 0);
 
@@ -61,7 +62,7 @@ export function TyreCard({ corner, refTyre, cmpTyre, scale }: Props) {
         {pressures && (
           <>
             {" · "}
-            {press(pressures[0])} → {press(pressures[1])} {pressureUnit(units)}
+            {press(pressures.ref)} → {press(pressures.cmp)} {pressureUnit(units)}
           </>
         )}
       </p>

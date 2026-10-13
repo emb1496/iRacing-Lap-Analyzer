@@ -8,7 +8,7 @@ import subprocess
 import time
 from pathlib import Path
 
-import httpx
+import httpx2
 import pytest
 
 from tests_integration.launch import BACKEND_DIR, environment, free_port, python_command
@@ -48,12 +48,12 @@ def test_api_works_but_nothing_is_served_at_root(unbuilt_backend):
         deadline = time.monotonic() + 30
         while True:
             try:
-                assert httpx.get(f"{base}/api/health", timeout=1).json()["status"] == "ok"
+                assert httpx2.get(f"{base}/api/health", timeout=1).json()["status"] == "ok"
                 break
-            except httpx.HTTPError:
+            except httpx2.HTTPError:
                 assert proc.poll() is None and time.monotonic() < deadline
                 time.sleep(0.1)
-        assert httpx.get(f"{base}/").status_code == 404
+        assert httpx2.get(f"{base}/").status_code == 404
     finally:
         proc.terminate()
         proc.wait(timeout=10)

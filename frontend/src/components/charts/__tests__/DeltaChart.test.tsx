@@ -1,29 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import { makeShared } from "../../../test/chartShared";
-import { formatDelta } from "../../../lib/format";
-import { DeltaChart } from "../DeltaChart";
+import { DeltaChart, deltaSeconds } from "../DeltaChart";
 
 jest.mock("recharts", () => ({
   ...jest.requireActual("recharts"),
   ResponsiveContainer: jest.requireActual("../../../test/rechartsMock").ResponsiveContainer,
 }));
-
-let mockFormat: (v: number) => string;
-jest.mock("../series", () => {
-  const actual = jest.requireActual("../series");
-  return {
-    ...actual,
-    chartTooltip: (units: string, format: (v: number) => string) => {
-      mockFormat = format;
-      return actual.chartTooltip(units, format);
-    },
-  };
-});
-
-it("formats the tooltip value as seconds", () => {
-  render(<DeltaChart shared={makeShared()} showAxis={false} />);
-  expect(mockFormat(0.5)).toBe(`${formatDelta(0.5)} s`);
-});
 
 it("renders with and without its distance axis", () => {
   const shared = makeShared();
@@ -37,4 +19,9 @@ it("renders with and without its distance axis", () => {
 it("labels visible corners", () => {
   const { container } = render(<DeltaChart shared={makeShared()} showAxis={false} />);
   expect(container.querySelectorAll(".recharts-reference-line").length).toBeGreaterThanOrEqual(3);
+});
+
+it("formats the tooltip delta in seconds", () => {
+  expect(deltaSeconds(0.123)).toBe("+0.123 s");
+  expect(deltaSeconds(-0.5)).toBe("−0.500 s");
 });

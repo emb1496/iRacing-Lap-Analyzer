@@ -34,7 +34,6 @@ coverage.xml
 htmlcov/
 coverage/
 *.lcov
-e2e/test-results/
 coverage-e2e/
 
 # E2E

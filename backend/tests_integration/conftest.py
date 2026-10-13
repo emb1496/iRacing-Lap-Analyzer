@@ -6,7 +6,7 @@ import subprocess
 import time
 from collections.abc import Iterator
 
-import httpx
+import httpx2
 import pytest
 
 from lap_analyzer.synthetic import SyntheticSession, demo_session
@@ -33,9 +33,9 @@ def server() -> Iterator[str]:
             if proc.poll() is not None:
                 pytest.fail(f"server exited early with code {proc.returncode}")
             try:
-                httpx.get(f"{base}/api/health", timeout=1).raise_for_status()
+                httpx2.get(f"{base}/api/health", timeout=1).raise_for_status()
                 break
-            except httpx.HTTPError:
+            except httpx2.HTTPError:
                 if time.monotonic() > deadline:
                     pytest.fail("server did not become healthy within 30s")
                 time.sleep(0.1)
@@ -49,8 +49,8 @@ def server() -> Iterator[str]:
 
 
 @pytest.fixture(scope="session")
-def client(server: str) -> Iterator[httpx.Client]:
-    with httpx.Client(base_url=server, timeout=30) as c:
+def client(server: str) -> Iterator[httpx2.Client]:
+    with httpx2.Client(base_url=server, timeout=30) as c:
         yield c
 
 
