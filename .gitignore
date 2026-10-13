@@ -33,3 +33,5 @@ coverage.xml
 .coverage
 htmlcov/
 coverage/
+*.lcov
+e2e/test-results/
