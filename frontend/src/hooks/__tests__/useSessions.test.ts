@@ -137,6 +137,14 @@ it("an uploaded second file switches off same-file; the same session again does 
   expect(result.current.sameFile).toBe(false);
 });
 
+it("adding the reference's own session again leaves same-file on", async () => {
+  const { result } = renderHook(() => useSessions());
+  await act(() => result.current.addSession(async () => makeSession()));
+  await act(() => result.current.addSession(async () => makeSession({ best_lap: 2 })));
+  expect(result.current.sameFile).toBe(true);
+  expect(result.current.selection.cmp).toEqual({ sessionId: "s1", lap: 2 });
+});
+
 it("compares only the same track and car", () => {
   const a = { track: "Spa", car: "GT3" };
   expect(canCompare(a, { track: "Spa", car: "GT3" })).toBe(true);

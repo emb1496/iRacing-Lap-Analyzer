@@ -1,13 +1,28 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import type { MouseHandlerDataParam } from "recharts";
 import { makeComparison, makeTrace } from "../../../test/fixtures";
 import { TelemetryCharts } from "../TelemetryCharts";
+import type { ChartShared } from "../types";
 
 jest.mock("recharts", () => ({
   ...jest.requireActual("recharts"),
   ResponsiveContainer: jest.requireActual("../../../test/rechartsMock").ResponsiveContainer,
 }));
 
-const renderCharts = (c = makeComparison(), zoom: [number, number] | null = null, onZoom = jest.fn()) =>
+// Capture the shared chart props so a test can drive the brush handlers recharts would call.
+let mockShared: ChartShared;
+jest.mock("../SpeedChart", () => {
+  const { SpeedChart } = jest.requireActual("../SpeedChart");
+  const { createElement } = jest.requireActual("react");
+  return {
+    SpeedChart: (props: { shared: ChartShared }) => {
+      mockShared = props.shared;
+      return createElement(SpeedChart, props);
+    },
+  };
+});
+
+const renderCharts =(c = makeComparison(), zoom: [number, number] | null = null, onZoom = jest.fn()) =>
   render(<TelemetryCharts comparison={c} onHover={jest.fn()} zoom={zoom} onZoom={onZoom} />);
 
 it("renders every chart when all channels exist", () => {
@@ -24,6 +39,16 @@ it("zooms out on double click and ends a drag on mouse up", () => {
   fireEvent.doubleClick(root);
   expect(onZoom).toHaveBeenCalledWith(null);
   fireEvent.mouseUp(root);
+});
+
+it("marks the charts as brushing while a drag is in progress", () => {
+  const { container } = renderCharts();
+  const root = container.querySelector(".charts") as HTMLElement;
+  expect(root).not.toHaveClass("brushing");
+  act(() => mockShared.handlers.onMouseDown({ activeTooltipIndex: 1 } as MouseHandlerDataParam));
+  expect(root).toHaveClass("brushing");
+  fireEvent.mouseUp(root);
+  expect(root).not.toHaveClass("brushing");
 });
 
 it("switches the tyre", () => {
