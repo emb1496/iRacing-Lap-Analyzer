@@ -62,6 +62,26 @@ def test_scan_falls_back_to_mtime_without_a_header_date(tmp_path):
     assert entry.recorded_at == datetime.fromtimestamp(1_700_000_000, tz=timezone.utc)
 
 
+def test_scan_reuses_cached_entry_for_unchanged_file(tmp_path, monkeypatch):
+    (tmp_path / "a.ibt").write_bytes(generate_session(DEMO_PROFILES).ibt)
+    first = library.scan(tmp_path)
+    monkeypatch.setattr(library, "read_meta", lambda path: pytest.fail("re-read an unchanged file"))
+    assert library.scan(tmp_path) == first
+
+
+def test_scan_skips_file_that_vanishes_before_stat(tmp_path, monkeypatch):
+    (tmp_path / "gone.ibt").write_bytes(b"")
+    real_stat = library.Path.stat
+
+    def flaky_stat(self, *args, **kwargs):
+        if self.name == "gone.ibt":
+            raise FileNotFoundError(self.name)
+        return real_stat(self, *args, **kwargs)
+
+    monkeypatch.setattr(library.Path, "stat", flaky_stat)
+    assert library.scan(tmp_path) == []
+
+
 def test_scan_cache_follows_file_changes(tmp_path):
     path = tmp_path / "a.ibt"
     path.write_bytes(generate_session(DEMO_PROFILES).ibt)
@@ -96,6 +116,7 @@ def test_telemetry_dir_finds_standard_location(tmp_path, monkeypatch):
     monkeypatch.delenv(library.ENV_VAR, raising=False)
     monkeypatch.setattr(library, "Path", library.Path)  # keep Path real
     monkeypatch.setattr(library.Path, "home", classmethod(lambda cls: tmp_path))
+    monkeypatch.setattr(library, "_windows_documents", lambda: None)  # not the real Documents
     assert library.telemetry_dir() is None
     target = tmp_path / "OneDrive" / "Documents" / "iRacing" / "telemetry"
     target.mkdir(parents=True)
