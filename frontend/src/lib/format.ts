@@ -21,3 +21,11 @@ export const WETNESS_LABELS = [
   "Very wet",
   "Extremely wet",
 ];
+
+/** "Dec 29, 2025, 9:20 AM" in the viewer's locale and time zone; empty for missing/invalid input. */
+export function formatDateTime(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}

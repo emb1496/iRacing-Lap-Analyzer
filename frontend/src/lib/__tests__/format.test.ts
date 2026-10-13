@@ -1,4 +1,4 @@
-import { formatDelta, formatLapTime, WETNESS_LABELS } from "../format";
+import { formatDateTime, formatDelta, formatLapTime, WETNESS_LABELS } from "../format";
 
 it("formats lap times", () => {
   expect(formatLapTime(null)).toBe("--:--.---");
@@ -15,4 +15,11 @@ it("formats deltas with sign", () => {
 it("has a label per wetness level", () => {
   expect(WETNESS_LABELS[1]).toBe("Dry");
   expect(WETNESS_LABELS).toHaveLength(8);
+});
+
+it("formats a recording timestamp, tolerating missing or bad input", () => {
+  expect(formatDateTime("2025-12-29T09:20:00Z")).toMatch(/2025/);
+  expect(formatDateTime(null)).toBe("");
+  expect(formatDateTime(undefined)).toBe("");
+  expect(formatDateTime("not a date")).toBe("");
 });

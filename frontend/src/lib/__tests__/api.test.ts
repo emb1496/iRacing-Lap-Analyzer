@@ -20,6 +20,19 @@ describe("api", () => {
     expect(init.method).toBe("POST");
     expect((init.body as FormData).get("file")).toBeInstanceOf(File);
   });
+  it("lists the telemetry folder", async () => {
+    fetchMock.mockResolvedValue(ok({ directory: null, files: [] }));
+    await expect(api.library()).resolves.toEqual({ directory: null, files: [] });
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/files");
+  });
+  it("loads a file from the telemetry folder by name", async () => {
+    fetchMock.mockResolvedValue(ok({ id: "z" }));
+    await api.loadFromLibrary("a b.ibt");
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/sessions/from-library");
+    const init = fetchMock.mock.calls[0][1];
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body)).toEqual({ name: "a b.ibt" });
+  });
   it("compares laps", async () => {
     fetchMock.mockResolvedValue(ok({}));
     const signal = new AbortController().signal;

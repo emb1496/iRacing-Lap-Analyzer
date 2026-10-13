@@ -240,17 +240,64 @@ td {
 
 /* ---- main content ---- */
 
-.empty-state {
-  margin: 12vh auto 0;
-  max-width: 460px;
-  text-align: center;
-  color: var(--muted);
-  line-height: 1.6;
+.file-picker {
+  max-width: 980px;
+  margin: 6vh auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
-.empty-state h2 {
-  color: var(--text);
+.file-picker h2 {
   font-size: 28px;
-  margin-bottom: 8px;
+  margin: 0;
+}
+.ref-text {
+  color: var(--ref);
+}
+.cmp-text {
+  color: var(--cmp);
+}
+.picker-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.picker-bar input[type="search"] {
+  flex: 1;
+  min-width: 180px;
+  font: inherit;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 10px;
+}
+.same-file {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+.files {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.files td,
+.files th {
+  padding: 8px 10px;
+}
+.files .pick-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+button.link {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--ref);
+  text-decoration: underline;
 }
 
 .error {

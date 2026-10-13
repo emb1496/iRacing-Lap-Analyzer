@@ -1,4 +1,4 @@
-import type { Comparison, LapSelection, SessionSummary } from "./types";
+import type { Comparison, LapSelection, Library, SessionSummary } from "./types";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, init);
@@ -17,6 +17,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   loadDemo: () => request<SessionSummary>("/api/sessions/demo", { method: "POST" }),
+
+  library: () => request<Library>("/api/files"),
+
+  loadFromLibrary: (name: string) =>
+    request<SessionSummary>("/api/sessions/from-library", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    }),
 
   upload: (file: File) => {
     const body = new FormData();

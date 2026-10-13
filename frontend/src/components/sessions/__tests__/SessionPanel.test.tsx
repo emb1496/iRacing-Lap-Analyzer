@@ -24,3 +24,35 @@ it("lists sessions", () => {
   expect(screen.queryByText(/Drop an iRacing/)).toBeNull();
   expect(screen.getByText("a.ibt")).toBeInTheDocument();
 });
+
+it("offers to go back to the file picker once something is loaded", () => {
+  const onChangeFiles = jest.fn();
+  const { rerender } = render(
+    <SessionPanel sessions={[]} selection={none} busy={false} onPick={jest.fn()} onUpload={jest.fn()} onDemo={jest.fn()} onChangeFiles={onChangeFiles} />,
+  );
+  expect(screen.queryByText("Change files…")).toBeNull();
+  rerender(
+    <SessionPanel sessions={[makeSession()]} selection={none} busy={false} onPick={jest.fn()} onUpload={jest.fn()} onDemo={jest.fn()} onChangeFiles={onChangeFiles} />,
+  );
+  fireEvent.click(screen.getByText("Change files…"));
+  expect(onChangeFiles).toHaveBeenCalled();
+});
+
+it("blocks laps from a different car or track on the other side", () => {
+  const ref = makeSession({ id: "s1", filename: "a.ibt" });
+  const other = makeSession({ id: "s2", filename: "b.ibt", car: "Other car" });
+  render(
+    <SessionPanel
+      sessions={[ref, other]}
+      selection={{ ref: { sessionId: "s1", lap: 1 }, cmp: null }}
+      busy={false}
+      onPick={jest.fn()}
+      onUpload={jest.fn()}
+      onDemo={jest.fn()}
+    />,
+  );
+  const cmpButtons = screen.getAllByLabelText("Use lap 1 as comparison");
+  expect(cmpButtons[0]).toBeEnabled();
+  expect(cmpButtons[1]).toBeDisabled();
+  expect(cmpButtons[1]).toHaveAttribute("title", "Different track or car than the reference lap");
+});

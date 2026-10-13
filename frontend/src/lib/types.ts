@@ -12,9 +12,32 @@ export interface SessionSummary {
   track: string;
   car: string;
   driver: string;
+  /** ISO timestamp (UTC) of when logging started; null when the file has no date. */
+  recorded_at: string | null;
+  session_type: string | null;
   track_length: number;
   best_lap: number | null;
   laps: LapSummary[];
+}
+
+/** A telemetry file found in the iRacing telemetry folder, described without loading it. */
+export interface LibraryFile {
+  /** File name inside the folder; also what to ask the backend to load. */
+  name: string;
+  size: number;
+  modified: string;
+  track: string;
+  car: string;
+  driver: string;
+  recorded_at: string;
+  session_type: string | null;
+  lap_count: number | null;
+}
+
+export interface Library {
+  /** Null when the telemetry folder could not be found. */
+  directory: string | null;
+  files: LibraryFile[];
 }
 
 export interface LapSelection {

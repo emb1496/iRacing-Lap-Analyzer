@@ -1,4 +1,11 @@
-import type { Comparison, Conditions, Corner, SessionSummary, Trace } from "../lib/types";
+import type {
+  Comparison,
+  Conditions,
+  Corner,
+  LibraryFile,
+  SessionSummary,
+  Trace,
+} from "../lib/types";
 
 const N = 11;
 const range = (f: (i: number) => number) => Array.from({ length: N }, (_, i) => f(i));
@@ -84,6 +91,8 @@ export function makeSession(over: Partial<SessionSummary> = {}): SessionSummary 
     track: "Test Track",
     car: "Car",
     driver: "Me",
+    recorded_at: "2025-12-29T09:20:00Z",
+    session_type: "Race",
     track_length: 1000,
     best_lap: 1,
     laps: [
@@ -91,6 +100,21 @@ export function makeSession(over: Partial<SessionSummary> = {}): SessionSummary 
       { number: 2, time: 91.25, valid: true },
       { number: 3, time: null, valid: false },
     ],
+    ...over,
+  };
+}
+
+export function makeLibraryFile(over: Partial<LibraryFile> = {}): LibraryFile {
+  return {
+    name: "a.ibt",
+    size: 1000,
+    modified: "2025-12-29T10:00:00Z",
+    track: "Test Track",
+    car: "Car",
+    driver: "Me",
+    recorded_at: "2025-12-29T09:20:00Z",
+    session_type: "Race",
+    lap_count: 5,
     ...over,
   };
 }

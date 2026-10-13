@@ -42,7 +42,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173 and click **Try the demo session**. To use your own laps, enable telemetry logging in iRacing (Alt+L in the car), then drag a file from `Documents\iRacing\telemetry` onto the sidebar.
+Open http://localhost:5173. The app looks for your telemetry folder (`Documents\iRacing\telemetry`, including OneDrive-redirected Documents) and lists the recordings it finds, with date, track, car and session type. Pick one file for the reference lap and one for the comparison lap, or tick **Use the same file for both**. Laps from different tracks or cars can't be compared, so those files are greyed out once a reference is chosen. Enable telemetry logging in iRacing with Alt+L in the car. To use another folder set `IRACING_TELEMETRY_DIR` before starting the backend; files from elsewhere can be dropped onto the sidebar, and **Try the demo session** needs no files at all. Nothing is saved between runs.
 
 ## Desktop app (Windows)
 
@@ -105,6 +105,8 @@ cd backend && pytest --cov   # fails if backend coverage drops below 95%
 
 | Method | Path | |
 | --- | --- | --- |
+| `GET` | `/api/files` | `.ibt` files in the telemetry folder, newest first, with track, car, driver, recording date and session type (read from the file headers only) |
+| `POST` | `/api/sessions/from-library` | Load a file from the telemetry folder by name (`{"name": "x.ibt"}`) |
 | `POST` | `/api/sessions` | Upload an `.ibt` file (multipart field `file`) |
 | `POST` | `/api/sessions/demo` | Load the synthetic demo session |
 | `GET` | `/api/sessions` | List loaded sessions and their laps |
