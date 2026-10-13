@@ -15,7 +15,6 @@ it("converts temperature", () => {
   expect(u.convertTemp(100, "metric")).toBe(100);
   expect(u.convertTempDelta(10, "imperial")).toBe(18);
   expect(u.convertTempDelta(10, "metric")).toBe(10);
-  expect(u.formatTemp(20, "metric")).toBe("20°C");
 });
 
 it("converts pressure", () => {

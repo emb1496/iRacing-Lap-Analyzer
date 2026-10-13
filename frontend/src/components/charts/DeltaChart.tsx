@@ -6,6 +6,9 @@ import { ChartFrame } from "./ChartFrame";
 import { chartTooltip, line } from "./series";
 import type { ChartProps } from "./types";
 
+/** Tooltip text for a time delta, e.g. "+0.123 s". */
+export const deltaSeconds = (v: number) => `${formatDelta(v)} s`;
+
 export function DeltaChart({ shared, showAxis }: ChartProps) {
   const { comparison: c, rows, zoom, units, visibleCorners } = shared;
   const domain = useMemo(() => fitDomain(rows, ["delta"], zoom), [rows, zoom]);
@@ -31,7 +34,7 @@ export function DeltaChart({ shared, showAxis }: ChartProps) {
         />
       ))}
       <ReferenceLine y={0} stroke="var(--grid-strong)" />
-      {chartTooltip(units, (v) => `${formatDelta(v)} s`)}
+      {chartTooltip(units, deltaSeconds)}
       {line("delta", "var(--text)", "Delta")}
     </ChartFrame>
   );

@@ -27,10 +27,6 @@ export function convertTempDelta(c: number, units: Units): number {
   return units === "imperial" ? (c * 9) / 5 : c;
 }
 
-export function formatTemp(c: number, units: Units): string {
-  return `${Math.round(convertTemp(c, units))}${tempUnit(units)}`;
-}
-
 export function pressureUnit(units: Units): string {
   return units === "imperial" ? "psi" : "kPa";
 }

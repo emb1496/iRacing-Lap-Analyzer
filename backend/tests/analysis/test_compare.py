@@ -229,3 +229,15 @@ def test_compare_with_brake_channel_but_no_braking():
 
     result = compare_traces(coasting(), coasting(), LENGTH)
     assert all(c.ref_brake is None and c.ref_peak_brake == 0 for c in result.corners)
+
+
+def test_compare_lap_with_no_corners():
+    def flat_out() -> LapTrace:
+        t = _trace()
+        return LapTrace(
+            pct=t.pct, time=t.time, channels={**t.channels, "Speed": np.full_like(t.time, 60.0)}
+        )
+
+    result = compare_traces(flat_out(), flat_out(), LENGTH)
+    assert result.corners == []
+    assert len(result.delta) == len(result.distance)
