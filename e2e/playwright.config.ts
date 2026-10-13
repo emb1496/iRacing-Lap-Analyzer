@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { LIBRARY_DIR } from "./global-setup";
 
 const frontend = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "frontend");
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
@@ -45,6 +46,8 @@ export default defineConfig({
   webServer: {
     command: `${python} -m uvicorn lap_analyzer.main:app --host 127.0.0.1 --port ${PORT} --log-level warning`,
     cwd: "../backend",
+    // The picker lists this folder; global-setup fills it (the server only reads it per request).
+    env: { ...(process.env as Record<string, string>), IRACING_TELEMETRY_DIR: LIBRARY_DIR },
     url: `http://127.0.0.1:${PORT}/api/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,
