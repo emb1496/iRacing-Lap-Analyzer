@@ -321,7 +321,7 @@ test.describe("odd interactions", () => {
   test("cancelling the file picker changes nothing", async ({ page }) => {
     await page.goto("/");
     await fileInput(page).setInputFiles([]);
-    await expect(page.getByRole("heading", { name: "Where are you losing time?" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Pick your laps" })).toBeVisible();
     await expect(page.getByRole("alert")).toBeHidden();
   });
 
